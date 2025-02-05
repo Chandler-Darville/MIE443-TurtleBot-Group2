@@ -4,6 +4,7 @@
 #include <kobuki_msgs/BumperEvent.h>
 #include <sensor_msgs/LaserScan.h>
 
+//Odometry header files
 #include <nav_msgs/Odometry.h>
 #include <tf/transform_datatypes.h>
 
@@ -13,7 +14,7 @@
 #include <chrono>
 
 float angular = 0.0;
-float linear = 0.0;
+float linear = 1.0;
 
 double posX=0.0, posY=0.0, yaw=0.0;
 
@@ -21,16 +22,18 @@ double posX=0.0, posY=0.0, yaw=0.0;
 #define RAD2DEG(rad)((rad)*180./M_PI)
 #define DEG2RAD(deg)((deg)*M_PI/180.)
 
-
-uint8_t bumper[3] = {kobuki_msgs::BumperEvent::RELEASED,kobuki_msgs::BumperEvent::RELEASED, kobuki_msgs::BumperEvent::RELEASED};
-
 float minLaserDist = std::numeric_limits <float> ::infinity();
 int32_t nLasers = 0, desiredNLasers = 0, desiredAngle = 5;
 
+uint8_t bumper[3] = {kobuki_msgs::BumperEvent::RELEASED,kobuki_msgs::BumperEvent::RELEASED, kobuki_msgs::BumperEvent::RELEASED};
+
 void bumperCallback(const kobuki_msgs::BumperEvent::ConstPtr& msg)
 {
-	//Access using bumper[kobuki_msgs::BumperEvent::{}] LEFT, CENTRE, or RIGHT
+	//Access using bumper[kobuki_msgs::BumperEvent::{}] LEFT, CENTER, or RIGHT
     bumper[msg->bumper] = msg->state;
+//     bool leftState = bumper[kobuki_msgs::BumperEvent::LEFT];
+//     bool centerState = bumper[kobuki_msgs::BumperEvent::CENTER];
+//     bool rightState = bumper[kobuki_msgs::BumperEvent::RIGHT];
 }
 
 void laserCallback(const sensor_msgs::LaserScan::ConstPtr& msg)
@@ -70,36 +73,75 @@ int main(int argc, char **argv)
     uint64_t secondsElapsed = 0;
 
     float angular = 0.0;
-    float linear = 0.0;
+    float linear = 2.0;
 
     while(ros::ok() && secondsElapsed <= 480) {
         ros::spinOnce();
         
-        
         //Check if any of the bumpers were pressed
-
-        /*
         bool any_bumper_pressed = false;
         for (uint32_t b_idx = 0; b_idx < N_BUMPER; ++b_idx){
             any_bumper_pressed |= (bumper[b_idx] == kobuki_msgs::BumperEvent::PRESSED);
         }
 
-        //Control  logic after bumpers were pressed
-        if (posX<0.5 && yaw < M_PI/12 && !any_bumper_pressed){
-            angular =0.0;
-            linear = 0.2;
-        }
-
-        else if (yaw < M_PI/2 && posX > 0.5 && !any_bumper_pressed) {
-            angular = M_PI/6;
-            linear = 0.0;
-        }
-
-        else{
+        //Bumper Avoidance
+        if (any_bumper_pressed) {
+            //if bumper is hit, move backward
+            ROS_WARN("Bumper hit! Moving backward...");
             angular = 0.0;
+            linear = -1.0; //move backward
+            vel.angular.z = angular;
+            vel.linear.x = linear;
+            vel_pub.publish(vel);
+            ros::Duration(1.5).sleep(); //robot move backward for 1 second
+
+            //turn find open space
+            ROS_WARN("Turning to find open space...");
+            angular = M_PI/3;
             linear = 0.0;
-            break;
-        }*/
+            vel.angular.z = angular;
+            vel.linear.x = linear;
+            vel_pub.publish(vel);
+            ros::Duration(1.5).sleep(); 
+
+            //reset bumper state
+            for (uint32_t b_idx = 0; b_idx < N_BUMPER; ++b_idx){
+                any_bumper_pressed |= (bumper[b_idx] == kobuki_msgs::BumperEvent::PRESSED);
+            }
+        }
+
+        else if (minLaserDist > 0.5){ //if space is open
+            angular = 0.0;
+            linear = 1.0;
+            vel.angular.z = angular;
+            vel.linear.x = linear;
+            vel_pub.publish(vel);
+        }
+
+        else { //if too close to the wall or object, turn
+            angular = M_PI/2;
+            linear = 0.0;
+            vel.angular.z = angular;
+            vel.linear.x = linear;
+            vel_pub.publish(vel);
+        }
+
+        // //Control  logic after bumpers were pressed
+        // if (posX<0.5 && yaw < M_PI/12 && !any_bumper_pressed){
+        //     angular = 0.0;
+        //     linear = 0.2;
+        // }
+
+        // else if (yaw < M_PI/2 && posX > 0.5 && !any_bumper_pressed) {
+        //     angular = M_PI/6;
+        //     linear = 0.0;
+        // }
+
+        // else{
+        //     angular = 0.0;
+        //     linear = 2.0;
+        //     break;
+        // }
 
         vel.angular.z = angular;
         vel.linear.x = linear;
