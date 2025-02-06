@@ -220,7 +220,7 @@ void explore(geometry_msgs::Twist &vel, ros::Publisher &vel_pub)
 {
     // Define laser scan threshold for detecting walls
     float front_threshold = 0.5; // Distance to consider an obstacle in front
-    float side_threshold = 0.4;  // Distance to consider an obstacle on the sides
+    float side_threshold = 0.6;  // Distance to consider an obstacle on the sides
 
     // Laser scan sections
     float left_dist = std::numeric_limits<float>::infinity();
