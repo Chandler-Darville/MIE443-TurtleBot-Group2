@@ -134,7 +134,7 @@ void odomCallback(const nav_msgs::Odometry::ConstPtr& msg)
 
 // Random Exploration - Moves and Turns Randomly
 void explore(geometry_msgs::Twist &vel, ros::Publisher &vel_pub) {
-    if (minLaserDist < 0.5) {  // If an obstacle is close
+    if (minLaserDist < 0.8) {  // If an obstacle is close
         ROS_WARN("Obstacle detected! Turning...");
         vel.linear.x = 0.0;
         vel.angular.z = (rand() % 2 == 0) ? M_PI / 6 : -M_PI / 6;  // Random turn direction
