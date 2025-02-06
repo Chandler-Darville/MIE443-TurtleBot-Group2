@@ -64,6 +64,8 @@ void laserCallback(const sensor_msgs::LaserScan::ConstPtr& msg)
         }
         // ROS_INFO("Minimum Laser Dist: %i",minLaserDist);
     }
+    
+    ros::Duration(1.5).sleep();
 }
 
 void odomCallback(const nav_msgs::Odometry::ConstPtr& msg)
