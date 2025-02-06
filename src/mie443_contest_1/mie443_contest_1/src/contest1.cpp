@@ -31,9 +31,57 @@ void bumperCallback(const kobuki_msgs::BumperEvent::ConstPtr& msg)
 {
 	//Access using bumper[kobuki_msgs::BumperEvent::{}] LEFT, CENTER, or RIGHT
     bumper[msg->bumper] = msg->state;
-//     bool leftState = bumper[kobuki_msgs::BumperEvent::LEFT];
-//     bool centerState = bumper[kobuki_msgs::BumperEvent::CENTER];
-//     bool rightState = bumper[kobuki_msgs::BumperEvent::RIGHT];
+}
+
+void bumperMovement(geometry_msgs::Twist vel, ros::Publisher vel_pub)
+{
+    bool leftState = (bumper[kobuki_msgs::BumperEvent::LEFT] == kobuki_msgs::BumperEvent::PRESSED);
+    bool centerState = (bumper[kobuki_msgs::BumperEvent::CENTER] == kobuki_msgs::BumperEvent::PRESSED);
+    bool rightState = (bumper[kobuki_msgs::BumperEvent::RIGHT] == kobuki_msgs::BumperEvent::PRESSED);
+
+    if leftState {
+        ROS_WARN("Left bumper hit! Moving backward...");
+        vel.angular.z = 0.0;
+        vel.linear.x = -0.1;
+        vel_pub.publish(vel);
+        ros::Duration(1.5).sleep(); //robot move backward for 1 second
+
+        ROS_WARN("Turning Right to find open space...");
+        vel.angular.z = -M_PI/3;
+        vel.linear.x = 0.0;
+        vel_pub.publish(vel);
+        ros::Duration(1.5).sleep(); 
+    }
+
+    else if centerState {
+        ROS_WARN("Center bumper hit! Moving backward...");
+        vel.angular.z = 0.0;
+        vel.linear.x = -1.0;
+        vel_pub.publish(vel);
+        ros::Duration(1.5).sleep(); //robot move backward for 1 second
+
+        ROS_WARN("Turning Left to find open space...");
+        angular = M_PI/2;
+        linear = 0.0;
+        vel.angular.z = angular;
+        vel.linear.x = linear;
+        vel_pub.publish(vel);
+        ros::Duration(1.5).sleep(); 
+    }
+
+    else if rightState {
+        ROS_WARN("Right bumper hit! Moving backward...");
+        vel.angular.z = 0.0;
+        vel.linear.x = -1.0; //move backwward
+        vel_pub.publish(vel);
+        ros::Duration(1.5).sleep(); //robot move backward for 1 second
+
+        ROS_WARN("Turning Left to find open space...");
+        vel.angular.z = M_PI/3;  //turn 60 degrees right
+        vel.linear.x = 0.0;
+        vel_pub.publish(vel);
+        ros::Duration(1.5).sleep(); 
+    }
 }
 
 void laserCallback(const sensor_msgs::LaserScan::ConstPtr& msg)
@@ -97,70 +145,13 @@ int main(int argc, char **argv)
     while(ros::ok() && secondsElapsed <= 480) {
         ros::spinOnce();
         
-        //Check if any of the bumpers were pressed
-        bool any_bumper_pressed = false;
-        for (uint32_t b_idx = 0; b_idx < N_BUMPER; ++b_idx){
-            any_bumper_pressed |= (bumper[b_idx] == kobuki_msgs::BumperEvent::PRESSED);
-        }
-
-        //Bumper Avoidance
-        if (any_bumper_pressed) {
-            //if bumper is hit, move backward
-            ROS_WARN("Bumper hit! Moving backward...");
-            angular = 0.0;
-            linear = -1.0; //move backward
-            vel.angular.z = angular;
-            vel.linear.x = linear;
-            vel_pub.publish(vel);
-            ros::Duration(1.5).sleep(); //robot move backward for 1 second
-
-            //turn find open space
-            ROS_WARN("Turning to find open space...");
-            angular = M_PI/3;
-            linear = 0.0;
-            vel.angular.z = angular;
-            vel.linear.x = linear;
-            vel_pub.publish(vel);
-            ros::Duration(1.5).sleep(); 
-
-            //reset bumper state
-            for (uint32_t b_idx = 0; b_idx < N_BUMPER; ++b_idx){
-                any_bumper_pressed |= (bumper[b_idx] == kobuki_msgs::BumperEvent::PRESSED);
-            }
-        }
-
-        else if (minLaserDist > 0.5){ //if space is open
-            angular = 0.0;
-            linear = 1.0;
-            vel.angular.z = angular;
-            vel.linear.x = linear;
-            vel_pub.publish(vel);
-        }
-
-        else { //if too close to the wall or object, turn
-            angular = M_PI/2;
-            linear = 0.0;
-            vel.angular.z = angular;
-            vel.linear.x = linear;
-            vel_pub.publish(vel);
-        }
-
-        // //Control  logic after bumpers were pressed
-        // if (posX<0.5 && yaw < M_PI/12 && !any_bumper_pressed){
-        //     angular = 0.0;
-        //     linear = 0.2;
+        // //Check if any of the bumpers were pressed
+        // bool any_bumper_pressed = false;
+        // for (uint32_t b_idx = 0; b_idx < N_BUMPER; ++b_idx){
+        //     any_bumper_pressed |= (bumper[b_idx] == kobuki_msgs::BumperEvent::PRESSED);
         // }
 
-        // else if (yaw < M_PI/2 && posX > 0.5 && !any_bumper_pressed) {
-        //     angular = M_PI/6;
-        //     linear = 0.0;
-        // }
-
-        // else{
-        //     angular = 0.0;
-        //     linear = 2.0;
-        //     break;
-        // }
+        bumperMovement(vel, vel_pub);
 
         vel.angular.z = angular;
         vel.linear.x = linear;
