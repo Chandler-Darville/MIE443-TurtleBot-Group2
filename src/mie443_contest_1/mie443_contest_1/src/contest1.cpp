@@ -112,53 +112,53 @@ int main(int argc, char **argv)
     while(ros::ok() && secondsElapsed <= 480) {
         ros::spinOnce();
         
-        //Check if any of the bumpers were pressed
-        bool any_bumper_pressed = false;
-        for (uint32_t b_idx = 0; b_idx < N_BUMPER; ++b_idx){
-            any_bumper_pressed |= (bumper[b_idx] == kobuki_msgs::BumperEvent::PRESSED);
-        }
+        // //Check if any of the bumpers were pressed
+        // bool any_bumper_pressed = false;
+        // for (uint32_t b_idx = 0; b_idx < N_BUMPER; ++b_idx){
+        //     any_bumper_pressed |= (bumper[b_idx] == kobuki_msgs::BumperEvent::PRESSED);
+        // }
 
-        //Bumper Avoidance
-        if (any_bumper_pressed) {
-            //if bumper is hit, move backward
-            ROS_WARN("Bumper hit! Moving backward...");
-            angular = 0.0;
-            linear = -1.0; //move backward
-            vel.angular.z = angular;
-            vel.linear.x = linear;
-            vel_pub.publish(vel);
-            ros::Duration(1.5).sleep(); //robot move backward for 1 second
+        // //Bumper Avoidance
+        // if (any_bumper_pressed) {
+        //     //if bumper is hit, move backward
+        //     ROS_WARN("Bumper hit! Moving backward...");
+        //     angular = 0.0;
+        //     linear = -1.0; //move backward
+        //     vel.angular.z = angular;
+        //     vel.linear.x = linear;
+        //     vel_pub.publish(vel);
+        //     ros::Duration(1.5).sleep(); //robot move backward for 1 second
 
-            //turn find open space
-            ROS_WARN("Turning to find open space...");
-            angular = M_PI/3;
-            linear = 0.0;
-            vel.angular.z = angular;
-            vel.linear.x = linear;
-            vel_pub.publish(vel);
-            ros::Duration(1.5).sleep(); 
+        //     //turn find open space
+        //     ROS_WARN("Turning to find open space...");
+        //     angular = M_PI/3;
+        //     linear = 0.0;
+        //     vel.angular.z = angular;
+        //     vel.linear.x = linear;
+        //     vel_pub.publish(vel);
+        //     ros::Duration(1.5).sleep(); 
 
-            //reset bumper state
-            for (uint32_t b_idx = 0; b_idx < N_BUMPER; ++b_idx){
-                any_bumper_pressed |= (bumper[b_idx] == kobuki_msgs::BumperEvent::PRESSED);
-            }
-        }
+        //     //reset bumper state
+        //     for (uint32_t b_idx = 0; b_idx < N_BUMPER; ++b_idx){
+        //         any_bumper_pressed |= (bumper[b_idx] == kobuki_msgs::BumperEvent::PRESSED);
+        //     }
+        // }
 
-        else if (minLaserDist > 0.5){ //if space is open
-            angular = 0.0;
-            linear = 1.0;
-            vel.angular.z = angular;
-            vel.linear.x = linear;
-            vel_pub.publish(vel);
-        }
+        // else if (minLaserDist > 0.5){ //if space is open
+        //     angular = 0.0;
+        //     linear = 0.0;
+        //     vel.angular.z = angular;
+        //     vel.linear.x = linear;
+        //     vel_pub.publish(vel);
+        // }
 
-        else { //if too close to the wall or object, turn
-            angular = M_PI/2;
-            linear = 0.0;
-            vel.angular.z = angular;
-            vel.linear.x = linear;
-            vel_pub.publish(vel);
-        }
+        // else { //if too close to the wall or object, turn
+        //     angular = M_PI/2;
+        //     linear = 0.0;
+        //     vel.angular.z = angular;
+        //     vel.linear.x = linear;
+        //     vel_pub.publish(vel);
+        // }
 
         // //Control  logic after bumpers were pressed
         // if (posX<0.5 && yaw < M_PI/12 && !any_bumper_pressed){
@@ -177,9 +177,9 @@ int main(int argc, char **argv)
         //     break;
         // }
 
-        vel.angular.z = angular;
-        vel.linear.x = linear;
-        vel_pub.publish(vel);
+        // vel.angular.z = angular;
+        // vel.linear.x = linear;
+        // vel_pub.publish(vel);
 
         // The last thing to do is to update the timer.
         secondsElapsed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now()-start).count();
