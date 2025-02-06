@@ -138,12 +138,15 @@ void explore(geometry_msgs::Twist &vel, ros::Publisher &vel_pub) {
         ROS_WARN("Obstacle detected! Turning...");
         vel.linear.x = 0.0;
         vel.angular.z = (rand() % 2 == 0) ? M_PI / 6 : -M_PI / 6;  // Random turn direction
+        vel_pub.publish(vel);
+        ros::Duration(1.5).sleep();
     } else {
         vel.linear.x = 0.2;  // Move forward
         vel.angular.z = ((rand() % 10) == 0) ? ((rand() % 2 == 0) ? M_PI / 6 : -M_PI / 6) : 0.0;  // Occasional random turn
+        vel_pub.publish(vel);
+        ros::Duration(1.5).sleep();
     }
 
-    vel_pub.publish(vel);
 }
 
 int main(int argc, char **argv)
