@@ -22,8 +22,6 @@ double posX=0.0, posY=0.0, yaw=0.0;
 #define RAD2DEG(rad)((rad)*180./M_PI)
 #define DEG2RAD(deg)((deg)*M_PI/180.)
 
-float minLaserDist = std::numeric_limits <float> ::infinity();
-int32_t nLasers = 0, desiredNLasers = 0, desiredAngle = 5;
 
 uint8_t bumper[3] = {kobuki_msgs::BumperEvent::RELEASED,kobuki_msgs::BumperEvent::RELEASED, kobuki_msgs::BumperEvent::RELEASED};
 
@@ -36,21 +34,27 @@ void bumperCallback(const kobuki_msgs::BumperEvent::ConstPtr& msg)
 //     bool rightState = bumper[kobuki_msgs::BumperEvent::RIGHT];
 }
 
+float minLaserDist = std::numeric_limits <float> ::infinity();
+int32_t nLasers = 0, desiredNLasers = 0, desiredAngle = 10;
+
 void laserCallback(const sensor_msgs::LaserScan::ConstPtr& msg)
 {
 	minLaserDist=std::numeric_limits<float>::infinity();
     
-    nLasers=(msg->angle_max-msg->angle_min)/msg->angle_increment;
-    desiredNLasers=DEG2RAD(desiredAngle)/msg->angle_increment;
+    nLasers=(msg->angle_max-msg->angle_min)/msg->angle_increment; // total number of lasers
+    desiredNLasers=DEG2RAD(desiredAngle)/msg->angle_increment;// index of the desired laser
     ROS_INFO("Size of laser scan array: %i and size of offset: %i",nLasers,desiredNLasers); // offset is the number of sectors from the center sector
 
-    if(desiredAngle*M_PI/180<msg->angle_max&&-desiredAngle*M_PI/180>msg->angle_min) //if the desired angle is within the size of the cone
+    if(DEG2RAD(desiredAngle)<msg->angle_max && DEG2RAD(-desiredAngle)>msg->angle_min) //if the desired angle is within the size of the cone
     {
         for(uint32_t laser_idx = nLasers/2-desiredNLasers; laser_idx < nLasers/2 + desiredNLasers;++laser_idx)
         {
-            minLaserDist=std::min(minLaserDist,msg->ranges[laser_idx]);
+
+            ROS_INFO("Min laser dist: %f, msg->ranges[laser_idx]: %f", minLaserDist, msg->ranges[laser_idx]);
+
+            minLaserDist=std::min(minLaserDist, msg->ranges[laser_idx]);
         }
-        ROS_INFO("Minimum Laser Dist:",minLaserDist);
+        ROS_INFO("Minimum Laser Dist: %f",minLaserDist);
     }
     else // if the desired angle is not in the cone (probably not useful)
     {
@@ -58,7 +62,7 @@ void laserCallback(const sensor_msgs::LaserScan::ConstPtr& msg)
         {
             minLaserDist = std::min(minLaserDist, msg->ranges[laser_idx]);
         }
-        ROS_INFO("Minimum Laser Dist:",minLaserDist);
+        // ROS_INFO("Minimum Laser Dist: %i",minLaserDist);
     }
 }
 
