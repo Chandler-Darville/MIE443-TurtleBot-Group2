@@ -34,45 +34,110 @@ void bumperCallback(const kobuki_msgs::BumperEvent::ConstPtr& msg)
 //     bool rightState = bumper[kobuki_msgs::BumperEvent::RIGHT];
 }
 
-float minLaserDist = std::numeric_limits <float> ::infinity();
-int32_t nLasers = 0, desiredNLasers = 0, desiredAngle = 10;
+float minLaserDistCenter = std::numeric_limits <float> ::infinity();
+float minLaserDistLeft = std::numeric_limits <float> ::infinity();
+float minLaserDistRight = std::numeric_limits <float> ::infinity();
+int32_t nLasers = 0, desiredNLasersCenter = 0, desiredNLasersLeft = 0, desiredNLasersRight = 0, desiredAngleCenter = 10,desiredAngleRight = 10,desiredAngleLeft = 10;
 
 void laserCallback(const sensor_msgs::LaserScan::ConstPtr& msg)
 {
-	minLaserDist=std::numeric_limits<float>::infinity();
-    
-    nLasers=(msg->angle_max-msg->angle_min)/msg->angle_increment; // total number of lasers
-    desiredNLasers=DEG2RAD(desiredAngle)/msg->angle_increment;// index of the desired laser
-    //ROS_INFO("Size of laser scan array: %i and size of offset: %i",nLasers,desiredNLasers); // offset is the number of sectors from the center sector
+	minLaserDistCenter=std::numeric_limits<float>::infinity();
+    minLaserDistLeft=std::numeric_limits<float>::infinity();
+    minLaserDistRight=std::numeric_limits<float>::infinity();
 
-    if(DEG2RAD(desiredAngle)<msg->angle_max && DEG2RAD(-desiredAngle)>msg->angle_min) //if the desired angle is within the size of the cone
+    nLasers=(msg->angle_max-msg->angle_min)/msg->angle_increment; // total number of laser indices
+    desiredNLasersCenter=DEG2RAD(desiredAngleCenter)/msg->angle_increment;// number of indices to search in center
+    desiredNLasersLeft=DEG2RAD(desiredAngleLeft)/msg->angle_increment;// number of indices to search on the left
+    desiredNLasersRight=DEG2RAD(desiredAngleRight)/msg->angle_increment;// number of indices to search on the right
+    //ROS_INFO("Size of laser scan array: %i and size of offset: %i",nLasers,desiredNLasersCenter); // offset is the number of sectors from the center sector
+
+
+//Minimum center distance
+    if(DEG2RAD(desiredAngleCenter)<msg->angle_max && DEG2RAD(-desiredAngleCenter)>msg->angle_min) //if the desired angle is within the size of the cone
     {
-        for(uint32_t laser_idx = nLasers/2-desiredNLasers; laser_idx < nLasers/2 + desiredNLasers;++laser_idx)
+        for(uint32_t laser_idx = nLasers/2-desiredNLasersCenter; laser_idx < nLasers/2 + desiredNLasersCenter;++laser_idx) // Center sector
         {
-            //ROS_INFO("Min laser dist: %f, msg->ranges[laser_idx]: %f", minLaserDist, msg->ranges[laser_idx]);
+            //ROS_INFO("Min laser dist: %f, msg->ranges[laser_idx]: %f", minLaserDistCenter, msg->ranges[laser_idx]);
 
-            minLaserDist=std::min(minLaserDist, msg->ranges[laser_idx]);
+            minLaserDistCenter=std::min(minLaserDistCenter, msg->ranges[laser_idx]);
         }
 
-        if(minLaserDist==std::numeric_limits <float> ::infinity())
+        if(minLaserDistCenter==std::numeric_limits <float> ::infinity())
         {
-            minLaserDist=0;
+            minLaserDistCenter=0;
         }
-        ROS_INFO("Minimum Laser Dist: %f",minLaserDist);
+        ROS_INFO("Minimum Laser Dist CENTER: %f",minLaserDistCenter);
     }
     else // if the desired angle is not in the cone (probably not useful)
     {
         for(uint32_t laser_idx = 0; laser_idx<nLasers; ++laser_idx)
         {
-            minLaserDist = std::min(minLaserDist, msg->ranges[laser_idx]);
+            minLaserDistCenter = std::min(minLaserDistCenter, msg->ranges[laser_idx]);
         }
-        // ROS_INFO("Minimum Laser Dist: %i",minLaserDist);
+        // ROS_INFO("Minimum Laser Dist: %i",minLaserDistCenter);
         
-        if(minLaserDist==std::numeric_limits <float> ::infinity())
+        if(minLaserDistCenter==std::numeric_limits <float> ::infinity())
         {
-            minLaserDist=0;
+            minLaserDistCenter=0;
         }
     }
+
+//Minimum distance on the right
+    if(DEG2RAD(desiredAngleRight)<((msg->angle_max)-(msg->angle_min)))
+    {
+        for(uint32_t laser_idx=0; laser_idx<desiredNLasersRight; ++laser_idx)
+        {
+            minLaserDistRight=std::min(minLaserDistRight, msg->ranges[laser_idx]);
+        }
+        if(minLaserDistRight==std::numeric_limits <float> ::infinity())
+        {
+            minLaserDistRight=0;
+        }
+        ROS_INFO("Minimum Laser Dist RIGHT: %f",minLaserDistRight);
+    }
+    else{
+        for(uint32_t laser_idx = 0; laser_idx<nLasers; ++laser_idx)
+        {
+            minLaserDistRight = std::min(minLaserDistRight, msg->ranges[laser_idx]);
+        }       
+        if(minLaserDistRight==std::numeric_limits <float> ::infinity())
+        {
+            minLaserDistRight=0;
+        }
+        ROS_INFO("Minimum Laser Dist RIGHT: %f",minLaserDistRight);
+    }
+
+
+
+//Minimum distance on the left
+    if(DEG2RAD(desiredAngleLeft)<((msg->angle_max)-(msg->angle_min)))
+    {
+        for(uint32_t laser_idx=nLasers-1; laser_idx>(nLasers-1)-desiredNLasersLeft; --laser_idx)
+        {
+            minLaserDistLeft=std::min(minLaserDistLeft, msg->ranges[laser_idx]);
+        }
+        if(minLaserDistLeft==std::numeric_limits <float> ::infinity())
+        {
+                minLaserDistLeft=0;
+        }
+
+        ROS_INFO("Minimum Laser Dist LEFT: %f",minLaserDistLeft);
+    }
+    else
+    {
+        for(uint32_t laser_idx = 0; laser_idx<nLasers; ++laser_idx)
+        {
+            minLaserDistLeft = std::min(minLaserDistLeft, msg->ranges[laser_idx]);
+        }
+
+        if(minLaserDistLeft==std::numeric_limits <float> ::infinity())
+        {
+            minLaserDistLeft=0;
+        }
+
+        ROS_INFO("Minimum Laser Dist LEFT: %f",minLaserDistLeft);
+    }
+
     
     ros::Duration(0.5).sleep();
 }
@@ -144,7 +209,7 @@ int main(int argc, char **argv)
         //     }
         // }
 
-        // else if (minLaserDist > 0.5){ //if space is open
+        // else if (minLaserDistCenter > 0.5){ //if space is open
         //     angular = 0.0;
         //     linear = 0.0;
         //     vel.angular.z = angular;
