@@ -118,6 +118,20 @@ void odomCallback(const nav_msgs::Odometry::ConstPtr& msg)
     ROS_INFO("Position: (%f, %f) Orientation: %f rad or %f degrees.", posX, posY, yaw, RAD2DEG(yaw));
 }
 
+// Random Exploration - Moves and Turns Randomly
+void explore(geometry_msgs::Twist &vel, ros::Publisher &vel_pub) {
+    if (minLaserDist < 0.5) {  // If an obstacle is close
+        ROS_WARN("Obstacle detected! Turning...");
+        vel.linear.x = 0.0;
+        vel.angular.z = (rand() % 2 == 0) ? M_PI / 6 : -M_PI / 6;  // Random turn direction
+    } else {
+        vel.linear.x = 0.2;  // Move forward
+        vel.angular.z = ((rand() % 10) == 0) ? ((rand() % 2 == 0) ? M_PI / 6 : -M_PI / 6) : 0.0;  // Occasional random turn
+    }
+
+    vel_pub.publish(vel);
+}
+
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "maze_explorer");
@@ -152,6 +166,7 @@ int main(int argc, char **argv)
         // }
 
         bumperMovement(vel, vel_pub);
+        explore(vel, vel_pub);
 
         vel.angular.z = angular;
         vel.linear.x = linear;
