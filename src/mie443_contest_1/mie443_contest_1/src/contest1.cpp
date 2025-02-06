@@ -132,21 +132,82 @@ void odomCallback(const nav_msgs::Odometry::ConstPtr& msg)
     ROS_INFO("Position: (%f, %f) Orientation: %f rad or %f degrees.", posX, posY, yaw, RAD2DEG(yaw));
 }
 
-// Random Exploration - Moves and Turns Randomly
-void explore(geometry_msgs::Twist &vel, ros::Publisher &vel_pub) {
-    if (minLaserDist < 0.8) {  // If an obstacle is close
-        ROS_WARN("Obstacle detected! Turning...");
-        vel.linear.x = 0.0;
-        vel.angular.z = (rand() % 2 == 0) ? M_PI / 6 : -M_PI / 6;  // Random turn direction
+// // Random Exploration - Moves and Turns Randomly
+// void explore(geometry_msgs::Twist &vel, ros::Publisher &vel_pub) {
+//     if (minLaserDist < 0.8) {  // If an obstacle is close
+//         ROS_WARN("Obstacle detected! Turning...");
+//         vel.linear.x = 0.0;
+//         vel.angular.z = (rand() % 2 == 0) ? M_PI / 6 : -M_PI / 6;  // Random turn direction
+//         vel_pub.publish(vel);
+//         ros::Duration(1.5).sleep();
+//     } else {
+//         vel.linear.x = 0.2;  // Move forward
+//         vel.angular.z = ((rand() % 10) == 0) ? ((rand() % 2 == 0) ? M_PI / 6 : -M_PI / 6) : 0.0;  // Occasional random turn
+//         vel_pub.publish(vel);
+//         ros::Duration(1.5).sleep();
+//     }
+
+// }
+
+void explore(geometry_msgs::Twist &vel, ros::Publisher &vel_pub)
+{
+    // Define laser scan threshold for detecting walls
+    float front_threshold = 0.5; // Distance to consider an obstacle in front
+    float side_threshold = 0.4;  // Distance to consider an obstacle on the sides
+
+    // Laser scan sections
+    float left_dist = std::numeric_limits<float>::infinity();
+    float right_dist = std::numeric_limits<float>::infinity();
+    float front_dist = minLaserDist; // Already computed in laserCallback()
+
+    // Divide laser scan into left and right sections
+    int left_idx_start = nLasers * 3 / 4;  // Left side
+    int right_idx_start = nLasers / 4;     // Right side
+
+    for (int i = left_idx_start; i < nLasers; i++)
+        left_dist = std::min(left_dist, minLaserDist);
+
+    for (int i = 0; i < right_idx_start; i++)
+        right_dist = std::min(right_dist, minLaserDist);
+
+    // Detect if the robot is trapped
+    bool is_trapped = (front_dist < front_threshold) && (left_dist < side_threshold) && (right_dist < side_threshold);
+
+    if (is_trapped)
+    {
+        ROS_WARN("Dead-end detected! Executing escape maneuver...");
+
+        // Move backward
+        vel.linear.x = -0.2;
+        vel.angular.z = 0.0;
         vel_pub.publish(vel);
         ros::Duration(1.5).sleep();
-    } else {
-        vel.linear.x = 0.2;  // Move forward
-        vel.angular.z = ((rand() % 10) == 0) ? ((rand() % 2 == 0) ? M_PI / 6 : -M_PI / 6) : 0.0;  // Occasional random turn
+
+        // Rotate 180 degrees
+        vel.linear.x = 0.0;
+        vel.angular.z = M_PI; // Rotate 180 degrees
+        vel_pub.publish(vel);
+        ros::Duration(2.0).sleep();
+
+        return; // Exit function early after escaping
+    }
+
+    // Normal wall-following behavior
+    if (front_dist < front_threshold)
+    {
+        ROS_WARN("Obstacle detected! Turning...");
+        vel.linear.x = 0.0;
+        vel.angular.z = (left_dist > right_dist) ? M_PI / 4 : -M_PI / 4; // Turn toward the more open direction
+        vel_pub.publish(vel);
+        ros::Duration(0.5).sleep();
+    }
+    else
+    {
+        vel.linear.x = 0.2;
+        vel.angular.z = 0.0;
         vel_pub.publish(vel);
         ros::Duration(1.5).sleep();
     }
-
 }
 
 int main(int argc, char **argv)
