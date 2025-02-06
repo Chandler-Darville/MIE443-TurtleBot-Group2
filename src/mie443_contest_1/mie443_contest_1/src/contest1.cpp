@@ -14,7 +14,7 @@
 #include <chrono>
 
 float angular = 0.0;
-float linear = 1.0;
+float linear = 0.0;
 
 double posX=0.0, posY=0.0, yaw=0.0;
 
@@ -107,7 +107,7 @@ int main(int argc, char **argv)
     uint64_t secondsElapsed = 0;
 
     float angular = 0.0;
-    float linear = 2.0;
+    float linear = 0.0;
 
     while(ros::ok() && secondsElapsed <= 480) {
         ros::spinOnce();
