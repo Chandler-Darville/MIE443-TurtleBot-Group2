@@ -43,13 +43,13 @@ void laserCallback(const sensor_msgs::LaserScan::ConstPtr& msg)
     
     nLasers=(msg->angle_max-msg->angle_min)/msg->angle_increment; // total number of lasers
     desiredNLasers=DEG2RAD(desiredAngle)/msg->angle_increment;// index of the desired laser
-    ROS_INFO("Size of laser scan array: %i and size of offset: %i",nLasers,desiredNLasers); // offset is the number of sectors from the center sector
+    //ROS_INFO("Size of laser scan array: %i and size of offset: %i",nLasers,desiredNLasers); // offset is the number of sectors from the center sector
 
     if(DEG2RAD(desiredAngle)<msg->angle_max && DEG2RAD(-desiredAngle)>msg->angle_min) //if the desired angle is within the size of the cone
     {
         for(uint32_t laser_idx = nLasers/2-desiredNLasers; laser_idx < nLasers/2 + desiredNLasers;++laser_idx)
         {
-            ROS_INFO("Min laser dist: %f, msg->ranges[laser_idx]: %f", minLaserDist, msg->ranges[laser_idx]);
+            //ROS_INFO("Min laser dist: %f, msg->ranges[laser_idx]: %f", minLaserDist, msg->ranges[laser_idx]);
 
             minLaserDist=std::min(minLaserDist, msg->ranges[laser_idx]);
         }
@@ -74,7 +74,7 @@ void laserCallback(const sensor_msgs::LaserScan::ConstPtr& msg)
         }
     }
     
-    ros::Duration(1.5).sleep();
+    ros::Duration(0.5).sleep();
 }
 
 void odomCallback(const nav_msgs::Odometry::ConstPtr& msg)
