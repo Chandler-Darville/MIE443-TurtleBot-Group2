@@ -88,17 +88,24 @@ void laserCallback(const sensor_msgs::LaserScan::ConstPtr& msg)
 {
 	minLaserDist=std::numeric_limits<float>::infinity();
     
-    nLasers=(msg->angle_max-msg->angle_min)/msg->angle_increment;
-    desiredNLasers=DEG2RAD(desiredAngle)/msg->angle_increment;
-    ROS_INFO("Size of laser scan array: %i and size of offset: %i",nLasers,desiredNLasers); // offset is the number of sectors from the center sector
+    nLasers=(msg->angle_max-msg->angle_min)/msg->angle_increment; // total number of lasers
+    desiredNLasers=DEG2RAD(desiredAngle)/msg->angle_increment;// index of the desired laser
+    //ROS_INFO("Size of laser scan array: %i and size of offset: %i",nLasers,desiredNLasers); // offset is the number of sectors from the center sector
 
-    if(desiredAngle*M_PI/180<msg->angle_max&&-desiredAngle*M_PI/180>msg->angle_min) //if the desired angle is within the size of the cone
+    if(DEG2RAD(desiredAngle)<msg->angle_max && DEG2RAD(-desiredAngle)>msg->angle_min) //if the desired angle is within the size of the cone
     {
         for(uint32_t laser_idx = nLasers/2-desiredNLasers; laser_idx < nLasers/2 + desiredNLasers;++laser_idx)
         {
-            minLaserDist=std::min(minLaserDist,msg->ranges[laser_idx]);
+            //ROS_INFO("Min laser dist: %f, msg->ranges[laser_idx]: %f", minLaserDist, msg->ranges[laser_idx]);
+
+            minLaserDist=std::min(minLaserDist, msg->ranges[laser_idx]);
         }
-        ROS_INFO("Minimum Laser Dist:",minLaserDist);
+
+        if(minLaserDist==std::numeric_limits <float> ::infinity())
+        {
+            minLaserDist=0;
+        }
+        ROS_INFO("Minimum Laser Dist: %f",minLaserDist);
     }
     else // if the desired angle is not in the cone (probably not useful)
     {
@@ -106,8 +113,15 @@ void laserCallback(const sensor_msgs::LaserScan::ConstPtr& msg)
         {
             minLaserDist = std::min(minLaserDist, msg->ranges[laser_idx]);
         }
-        ROS_INFO("Minimum Laser Dist:",minLaserDist);
+        // ROS_INFO("Minimum Laser Dist: %i",minLaserDist);
+        
+        if(minLaserDist==std::numeric_limits <float> ::infinity())
+        {
+            minLaserDist=0;
+        }
     }
+    
+    ros::Duration(0.5).sleep();
 }
 
 void odomCallback(const nav_msgs::Odometry::ConstPtr& msg)
