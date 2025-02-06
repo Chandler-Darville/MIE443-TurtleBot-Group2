@@ -14,7 +14,7 @@
 #include <chrono>
 
 float angular = 0.0;
-float linear = 1.0;
+float linear = 0.2;
 
 double posX=0.0, posY=0.0, yaw=0.0;
 
@@ -39,7 +39,7 @@ void bumperMovement(geometry_msgs::Twist vel, ros::Publisher vel_pub)
     bool centerState = (bumper[kobuki_msgs::BumperEvent::CENTER] == kobuki_msgs::BumperEvent::PRESSED);
     bool rightState = (bumper[kobuki_msgs::BumperEvent::RIGHT] == kobuki_msgs::BumperEvent::PRESSED);
 
-    if leftState {
+    if (leftState) {
         ROS_WARN("Left bumper hit! Moving backward...");
         vel.angular.z = 0.0;
         vel.linear.x = -0.1;
@@ -53,10 +53,10 @@ void bumperMovement(geometry_msgs::Twist vel, ros::Publisher vel_pub)
         ros::Duration(1.5).sleep(); 
     }
 
-    else if centerState {
+    else if (centerState) {
         ROS_WARN("Center bumper hit! Moving backward...");
         vel.angular.z = 0.0;
-        vel.linear.x = -1.0;
+        vel.linear.x = -0.1;
         vel_pub.publish(vel);
         ros::Duration(1.5).sleep(); //robot move backward for 1 second
 
@@ -69,10 +69,10 @@ void bumperMovement(geometry_msgs::Twist vel, ros::Publisher vel_pub)
         ros::Duration(1.5).sleep(); 
     }
 
-    else if rightState {
+    else if (rightState) {
         ROS_WARN("Right bumper hit! Moving backward...");
         vel.angular.z = 0.0;
-        vel.linear.x = -1.0; //move backwward
+        vel.linear.x = -0.1; //move backwward
         vel_pub.publish(vel);
         ros::Duration(1.5).sleep(); //robot move backward for 1 second
 
@@ -140,7 +140,7 @@ int main(int argc, char **argv)
     uint64_t secondsElapsed = 0;
 
     float angular = 0.0;
-    float linear = 2.0;
+    float linear = 0.2;
 
     while(ros::ok() && secondsElapsed <= 480) {
         ros::spinOnce();
