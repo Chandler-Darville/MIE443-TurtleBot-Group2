@@ -13,11 +13,15 @@
 
 #include <chrono>
 
+//might fail:
+#include <vector>
+#include <set>
+
 float angular = 0.0;
 float linear = 0.2;
 
 double posX = 0.0, posY = 0.0, yaw = 0.0;
-std::vector<std::pair<double, double>> visited_positions;
+std::vector<std::pair<double, double>> visited_cells;
 
 const double grid_resolution = 0.3; // meters
 const double revisit_threshold = 0.3; // meters
@@ -25,8 +29,8 @@ const double revisit_threshold = 0.3; // meters
 // Convert (x, y) to discrete grid coordinates
 std::pair<int, int> getGridCell(double x, double y)
 {
-    int grid_x = static_cast<int>(x / GRID_RESOLUTION);
-    int grid_y = static_cast<int>(y / GRID_RESOLUTION);
+    int grid_x = static_cast<int>(x / grid_resolution);
+    int grid_y = static_cast<int>(y / grid_resolution);
     return {grid_x, grid_y};
 }
 
@@ -41,7 +45,7 @@ uint8_t bumper[3] = {kobuki_msgs::BumperEvent::RELEASED, kobuki_msgs::BumperEven
 bool isRevisiting()
 {
     std::pair<int, int> current_cell = getGridCell(posX, posY);
-    return visited_cells.find(current_cell) != visited_cells.end();
+    std::set<std::pair<int,int>> visited_cells;
 }
 
 void bumperCallback(const kobuki_msgs::BumperEvent::ConstPtr &msg)
