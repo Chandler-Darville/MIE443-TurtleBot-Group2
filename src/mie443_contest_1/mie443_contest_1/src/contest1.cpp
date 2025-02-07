@@ -22,8 +22,12 @@ double posX = 0.0, posY = 0.0, yaw = 0.0;
 #define RAD2DEG(rad) ((rad) * 180. / M_PI)
 #define DEG2RAD(deg) ((deg) * M_PI / 180.)
 
-
 uint8_t bumper[3] = {kobuki_msgs::BumperEvent::RELEASED, kobuki_msgs::BumperEvent::RELEASED, kobuki_msgs::BumperEvent::RELEASED};
+
+
+void regionVisited {
+    
+}
 
 void bumperCallback(const kobuki_msgs::BumperEvent::ConstPtr &msg)
 {
@@ -188,7 +192,7 @@ void laserCallback(const sensor_msgs::LaserScan::ConstPtr& msg)
     }
 
     
-    ros::Duration(0.5).sleep();
+    // ros::Duration(0.5).sleep();
 }
 
 void odomCallback(const nav_msgs::Odometry::ConstPtr &msg)
@@ -221,7 +225,7 @@ void explore(geometry_msgs::Twist &vel, ros::Publisher &vel_pub)
     // Target distance from the wall
     float wall_distance = 0.5;  // Ideal distance to maintain
     float front_threshold = 0.5; // Obstacle avoidance threshold
-    float dead_end_threshold = 0.5; // Dead end detection threshold
+    float deadend_threshold = 0.5; // Dead end detection threshold
 
     // Read precomputed minimum distances from the laser scan
     float front_dist = minLaserDistCenter;
@@ -313,8 +317,8 @@ int main(int argc, char **argv)
         //     any_bumper_pressed |= (bumper[b_idx] == kobuki_msgs::BumperEvent::PRESSED);
         // }
 
-        bumperMovement(vel, vel_pub);
-        explore(vel, vel_pub);
+        // bumperMovement(vel, vel_pub);
+        // explore(vel, vel_pub);
 
         vel.angular.z = angular;
         vel.linear.x = linear;
