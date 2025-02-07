@@ -17,6 +17,9 @@ float angular = 0.0;
 float linear = 0.2;
 
 double posX = 0.0, posY = 0.0, yaw = 0.0;
+std::vector<std::pair<double, double>> visited_positions;
+
+const double revisit_threshold = 0.3; // meters
 
 #define N_BUMPER (3)
 #define RAD2DEG(rad) ((rad) * 180. / M_PI)
@@ -25,8 +28,16 @@ double posX = 0.0, posY = 0.0, yaw = 0.0;
 uint8_t bumper[3] = {kobuki_msgs::BumperEvent::RELEASED, kobuki_msgs::BumperEvent::RELEASED, kobuki_msgs::BumperEvent::RELEASED};
 
 
-void regionVisited {
-    
+bool regionVisited {
+    for (const auto &pos : visited_positions)
+    {
+        double distance = std::hypot(posX - pos.first, posY - pos.second);
+        if (distance < revisit_threshold)
+        {
+            ROS_WARN("Revisiting detected! Adjusting path...");
+            return true;
+        }
+    }
 }
 
 void bumperCallback(const kobuki_msgs::BumperEvent::ConstPtr &msg)
@@ -242,6 +253,16 @@ void explore(geometry_msgs::Twist &vel, ros::Publisher &vel_pub)
         ros::Duration(1.5).sleep(); // Allow time to turn
         return; // Exit function after turning
     }   
+
+    // Prevent revisiting explored areas
+    if (isRevisiting())
+    {
+        vel.linear.x = 0.0;
+        vel.angular.z = M_PI / 2; // Turn left to avoid the area
+        vel_pub.publish(vel);
+        ros::Duration(0.5).sleep();
+        return;
+    }
 
     // If an obstacle is directly in front, turn away
     if (front_dist < front_threshold)
