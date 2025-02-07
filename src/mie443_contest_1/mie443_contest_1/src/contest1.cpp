@@ -346,12 +346,13 @@ int main(int argc, char **argv)
         //     any_bumper_pressed |= (bumper[b_idx] == kobuki_msgs::BumperEvent::PRESSED);
         // }
 
-        // bumperMovement(vel, vel_pub);
-        // explore(vel, vel_pub);
+        bumperMovement(vel, vel_pub);
+        explore(vel, vel_pub);
 
         vel.angular.z = angular;
         vel.linear.x = linear;
         vel_pub.publish(vel);
+
 
         // The last thing to do is to update the timer.
         secondsElapsed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - start).count();
