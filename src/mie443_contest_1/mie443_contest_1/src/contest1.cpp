@@ -21,7 +21,9 @@ float angular = 0.0;
 float linear = 0.2;
 
 double posX = 0.0, posY = 0.0, yaw = 0.0;
-std::vector<std::pair<double, double>> visited_cells;
+//std::vector<std::pair<double, double>> visited_cells;
+
+std::vector<std::pair<int, int>> visited_cells;
 
 const double grid_resolution = 0.3; // meters
 const double revisit_threshold = 0.3; // meters
@@ -45,7 +47,14 @@ uint8_t bumper[3] = {kobuki_msgs::BumperEvent::RELEASED, kobuki_msgs::BumperEven
 bool isRevisiting()
 {
     std::pair<int, int> current_cell = getGridCell(posX, posY);
-    std::set<std::pair<int,int>> visited_cells;
+    for (const auto &cell : visited_cells)
+    {
+        if (cell == current_cell)
+        {
+            return true;
+        }
+    }
+    return false;
 }
 
 void bumperCallback(const kobuki_msgs::BumperEvent::ConstPtr &msg)
@@ -312,7 +321,7 @@ void explore(geometry_msgs::Twist &vel, ros::Publisher &vel_pub)
         ros::Duration(0.1).sleep();  // Small sleep for smooth movement
 
         // Store new position in visited grid cells
-        visited_cells.insert(getGridCell(posX, posY));
+        visited_cells.push_back(getGridCell(posX, posY));
     }
 }
 
