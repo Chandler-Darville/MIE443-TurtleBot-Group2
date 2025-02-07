@@ -43,7 +43,7 @@ void bumperMovement(geometry_msgs::Twist vel, ros::Publisher vel_pub)
         vel.angular.z = 0.0;
         vel.linear.x = -0.1;
         vel_pub.publish(vel);
-        ros::Duration(1.5).sleep(); // robot move backward for 1 second
+        ros::Duration(1.5).sleep(); // robot move backward for 1.5 second
 
         ROS_WARN("Turning Right to find open space...");
         vel.angular.z = -M_PI / 3;
@@ -58,7 +58,7 @@ void bumperMovement(geometry_msgs::Twist vel, ros::Publisher vel_pub)
         vel.angular.z = 0.0;
         vel.linear.x = -0.1;
         vel_pub.publish(vel);
-        ros::Duration(1.5).sleep(); // robot move backward for 1 second
+        ros::Duration(1.5).sleep(); // robot move backward for 1.5 second
 
         ROS_WARN("Turning Left to find open space...");
         angular = M_PI / 2;
@@ -118,7 +118,7 @@ void laserCallback(const sensor_msgs::LaserScan::ConstPtr& msg)
         }
         ROS_INFO("Minimum Laser Dist CENTER: %f",minLaserDistCenter);
     }
-    
+
     else // if the desired angle is not in the cone (probably not useful)
     {
         for(uint32_t laser_idx = 0; laser_idx<nLasers; ++laser_idx)
@@ -218,62 +218,64 @@ void odomCallback(const nav_msgs::Odometry::ConstPtr &msg)
 
 void explore(geometry_msgs::Twist &vel, ros::Publisher &vel_pub)
 {
-    // Define laser scan threshold for detecting walls
-    float front_threshold = 0.5; // Distance to consider an obstacle in front
-    float side_threshold = 0.6;  // Distance to consider an obstacle on the sides
+    // Target distance from the wall
+    float wall_distance = 0.5;  // Ideal distance to maintain
+    float front_threshold = 0.5; // Obstacle avoidance threshold
+    float dead_end_threshold = 0.5; // Dead end detection threshold
 
-    // Laser scan sections
-    float left_dist = std::numeric_limits<float>::infinity();
-    float right_dist = std::numeric_limits<float>::infinity();
-    float front_dist = minLaserDist; // Already computed in laserCallback()
+    // Read precomputed minimum distances from the laser scan
+    float front_dist = minLaserDistCenter;
+    float left_dist = minLaserDistLeft;
+    float right_dist = minLaserDistRight;
 
-    // Divide laser scan into left and right sections
-    int left_idx_start = nLasers * 3 / 4;  // Left side
-    int right_idx_start = nLasers / 4;     // Right side
-
-    for (int i = left_idx_start; i < nLasers; i++)
-        left_dist = std::min(left_dist, minLaserDist);
-
-    for (int i = 0; i < right_idx_start; i++)
-        right_dist = std::min(right_dist, minLaserDist);
-
-    // Detect if the robot is trapped
-    bool is_trapped = (front_dist < front_threshold) && (left_dist < side_threshold) && (right_dist < side_threshold);
-
-    if (is_trapped)
+    // Detect dead-end (obstacles in front, left, and right)
+    if (front_dist < deadend_threshold && left_dist < deadend_threshold && right_dist < deadend_threshold)
     {
-        ROS_WARN("Dead-end detected! Executing escape maneuver...");
-
-        // Move backward
-        vel.linear.x = -0.2;
-        vel.angular.z = 0.0;
-        vel_pub.publish(vel);
-        ros::Duration(1.5).sleep();
-
-        // Rotate 180 degrees
+        ROS_WARN("Dead-end detected! Turning around...");
         vel.linear.x = 0.0;
         vel.angular.z = M_PI; // Rotate 180 degrees
         vel_pub.publish(vel);
-        ros::Duration(2.0).sleep();
+        ros::Duration(1.5).sleep(); // Allow time to turn
+        return; // Exit function after turning
+    }   
 
-        return; // Exit function early after escaping
-    }
-
-    // Normal wall-following behavior
+    // If an obstacle is directly in front, turn away
     if (front_dist < front_threshold)
     {
-        ROS_WARN("Obstacle detected! Turning...");
+        ROS_WARN("Obstacle ahead! Turning...");
         vel.linear.x = 0.0;
-        vel.angular.z = (left_dist > right_dist) ? M_PI / 4 : -M_PI / 4; // Turn toward the more open direction
+        vel.angular.z = (left_dist > right_dist) ? M_PI / 2 : -M_PI / 2; // Turn toward the more open direction
         vel_pub.publish(vel);
         ros::Duration(0.5).sleep();
     }
+
     else
     {
-        vel.linear.x = 0.2;
-        vel.angular.z = 0.0;
+        // Wall-following behavior (try to maintain wall_distance)
+        float error = 0.0;
+        float kP = 2.0; // Proportional gain for wall following
+
+        if (left_dist < wall_distance && left_dist > 0.1)  
+        {
+            // Too close to the left wall → turn right
+            error = wall_distance - left_dist;
+            vel.angular.z = -kP * error;
+        }
+        else if (right_dist < wall_distance && right_dist > 0.1)
+        {
+            // Too close to the right wall → turn left
+            error = wall_distance - right_dist;
+            vel.angular.z = kP * error;
+        }
+        else
+        {
+            // No wall detected → go straight
+            vel.angular.z = 0.0;
+        }
+
+        vel.linear.x = 0.15;  // Move forward
         vel_pub.publish(vel);
-        ros::Duration(1.5).sleep();
+        ros::Duration(0.1).sleep();  // Small sleep for smooth movement
     }
 }
 
