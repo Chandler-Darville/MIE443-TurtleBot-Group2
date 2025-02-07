@@ -221,7 +221,7 @@ void explore(geometry_msgs::Twist &vel, ros::Publisher &vel_pub)
     // Target distance from the wall
     float wall_distance = 0.5;  // Ideal distance to maintain
     float front_threshold = 0.5; // Obstacle avoidance threshold
-    float dead_end_threshold = 0.5; // Dead end detection threshold
+    float deadend_threshold = 0.5; // Dead end detection threshold
 
     // Read precomputed minimum distances from the laser scan
     float front_dist = minLaserDistCenter;
