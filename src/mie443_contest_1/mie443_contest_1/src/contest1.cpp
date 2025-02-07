@@ -19,7 +19,16 @@ float linear = 0.2;
 double posX = 0.0, posY = 0.0, yaw = 0.0;
 std::vector<std::pair<double, double>> visited_positions;
 
+const double grid_resolution = 0.3; // meters
 const double revisit_threshold = 0.3; // meters
+
+// Convert (x, y) to discrete grid coordinates
+std::pair<int, int> getGridCell(double x, double y)
+{
+    int grid_x = static_cast<int>(x / GRID_RESOLUTION);
+    int grid_y = static_cast<int>(y / GRID_RESOLUTION);
+    return {grid_x, grid_y};
+}
 
 #define N_BUMPER (3)
 #define RAD2DEG(rad) ((rad) * 180. / M_PI)
@@ -28,16 +37,11 @@ const double revisit_threshold = 0.3; // meters
 uint8_t bumper[3] = {kobuki_msgs::BumperEvent::RELEASED, kobuki_msgs::BumperEvent::RELEASED, kobuki_msgs::BumperEvent::RELEASED};
 
 
-bool regionVisited {
-    for (const auto &pos : visited_positions)
-    {
-        double distance = std::hypot(posX - pos.first, posY - pos.second);
-        if (distance < revisit_threshold)
-        {
-            ROS_WARN("Revisiting detected! Adjusting path...");
-            return true;
-        }
-    }
+// Check if the robot is revisiting a grid cell
+bool isRevisiting()
+{
+    std::pair<int, int> current_cell = getGridCell(posX, posY);
+    return visited_cells.find(current_cell) != visited_cells.end();
 }
 
 void bumperCallback(const kobuki_msgs::BumperEvent::ConstPtr &msg)
@@ -254,9 +258,10 @@ void explore(geometry_msgs::Twist &vel, ros::Publisher &vel_pub)
         return; // Exit function after turning
     }   
 
-    // Prevent revisiting explored areas
+    // Prevent revisiting explored grid cells
     if (isRevisiting())
     {
+        ROS_WARN("Revisiting detected! Adjusting path...");
         vel.linear.x = 0.0;
         vel.angular.z = M_PI / 2; // Turn left to avoid the area
         vel_pub.publish(vel);
@@ -301,6 +306,9 @@ void explore(geometry_msgs::Twist &vel, ros::Publisher &vel_pub)
         vel.linear.x = 0.15;  // Move forward
         vel_pub.publish(vel);
         ros::Duration(0.1).sleep();  // Small sleep for smooth movement
+
+        // Store new position in visited grid cells
+        visited_cells.insert(getGridCell(posX, posY));
     }
 }
 
