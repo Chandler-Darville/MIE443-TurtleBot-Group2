@@ -271,16 +271,16 @@ void explore(geometry_msgs::Twist &vel, ros::Publisher &vel_pub)
         return; // Exit function after turning
     }   
 
-    // Prevent revisiting explored grid cells
-    if (isRevisiting())
-    {
-        ROS_WARN("Revisiting detected! Adjusting path...");
-        vel.linear.x = 0.0;
-        vel.angular.z = M_PI / 2; // Turn left to avoid the area
-        vel_pub.publish(vel);
-        ros::Duration(0.5).sleep();
-        return;
-    }
+    // // Prevent revisiting explored grid cells
+    // if (isRevisiting())
+    // {
+    //     ROS_WARN("Revisiting detected! Adjusting path...");
+    //     vel.linear.x = 0.0;
+    //     vel.angular.z = M_PI / 2; // Turn left to avoid the area
+    //     vel_pub.publish(vel);
+    //     ros::Duration(0.5).sleep();
+    //     return;
+    // }
 
     // If an obstacle is directly in front, turn away
     if (front_dist < front_threshold)
