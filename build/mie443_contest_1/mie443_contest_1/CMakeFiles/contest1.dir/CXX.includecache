@@ -27,10 +27,6 @@ cmath
 -
 chrono
 -
-vector
--
-set
--
 
 /opt/ros/kinetic/include/geometry_msgs/Point.h
 string
