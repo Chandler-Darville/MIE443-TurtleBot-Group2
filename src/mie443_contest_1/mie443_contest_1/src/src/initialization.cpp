@@ -60,9 +60,7 @@ void fullScan(const sensor_msgs::LaserScan::ConstPtr& msg) {
 
 }
 
-/*
 
-#include <iostream>
 #include <vector>
 #include <cmath>
 
@@ -112,5 +110,3 @@ PathInfo findOptimalPath(const std::vector<float>& scanData) {
 
     return {bestHeading, maxDistance};
 }
-
-*/
