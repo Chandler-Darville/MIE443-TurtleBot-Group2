@@ -21,7 +21,7 @@ double posX = 0.0, posY = 0.0, yaw = 0.0;
 std::vector<std::pair<double, double>> visited_positions;
 
 // Threshold for detecting revisited locations
-const double revisit_threshold = 0.3; // meters
+const double revisit_threshold = 0.5; // meters
 
 #define N_BUMPER (3)
 #define RAD2DEG(rad) ((rad) * 180. / M_PI)
@@ -278,41 +278,33 @@ void explore(geometry_msgs::Twist &vel, ros::Publisher &vel_pub)
     //     return;
     // }
 
-    // can be deleted if not working
-    std::vector<std::tuple<double, double, double>> turn_history; // Stores (posX, posY, yaw, turn_direction)
+    // // If an obstacle is directly in front, turn away
+    // if (front_dist < front_threshold)
+    // {
+    //     ROS_WARN("Obstacle ahead! Turning...");
+    //     vel.linear.x = 0.0;
+    //     vel.angular.z = (left_dist > right_dist) ? M_PI / 2 : -M_PI / 2; // Turn toward the more open direction
+    //     vel_pub.publish(vel);
+    //     ros::Duration(0.5).sleep();
+    // }
 
     // If an obstacle is directly in front, turn away
     if (front_dist < front_threshold)
     {
         ROS_WARN("Obstacle ahead! Turning...");
         vel.linear.x = 0.0;
-        vel.angular.z = (left_dist > right_dist) ? M_PI / 2 : -M_PI / 2; // Turn toward the more open direction
+
+        if (rand()% 2 == 0)
+        {
+            vel.angular.z = M_PI/2;
+        }
+        else {
+            vel.angular.z = -M_PI/2;
+        }
+        
         vel_pub.publish(vel);
         ros::Duration(0.5).sleep();
     }
-
-    
-
-    // can be deleted if not working
-        // **Check if the robot is at a known turn location**
-    for (const auto &turn : turn_history)
-    {
-        double prevX, prevY, prevYaw, prevTurnDir;
-        std::tie(prevX, prevY, prevYaw, prevTurnDir) = turn;
-
-        double distance = std::hypot(posX - prevX, posY - prevY);
-
-        if (distance < revisit_threshold && std::abs(yaw - prevYaw) < DEG2RAD(15))
-        {
-            ROS_WARN("Encountered previous turn point! Turning opposite direction...");
-            vel.linear.x = 0.0;
-            vel.angular.z = -prevTurnDir; // Turn opposite to previous direction
-            vel_pub.publish(vel);
-            ros::Duration(0.5).sleep();
-            return;
-        }
-    }
-
 
 
     else
@@ -383,7 +375,7 @@ int main(int argc, char **argv)
         // }
 
         bumperMovement(vel, vel_pub);
-        avoidRevisiting(vel, vel_pub);
+        // avoidRevisiting(vel, vel_pub);
         explore(vel, vel_pub);
 
         vel.angular.z = angular;
