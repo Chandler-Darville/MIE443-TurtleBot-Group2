@@ -257,14 +257,28 @@ void explore(geometry_msgs::Twist &vel, ros::Publisher &vel_pub)
         return; // Exit function after turning
     }   
 
-    // Prevent revisiting explored areas
+    // // Prevent revisiting explored areas
+    // if (isRevisiting())
+    // {
+    //     vel.linear.x = 0.0;
+    //     vel.angular.z = M_PI / 2; // Turn left to avoid the area
+    //     vel_pub.publish(vel);
+    //     ros::Duration(0.5).sleep();
+    //     return;
+    // }
+
+    static bool revisting = false;
     if (isRevisiting())
     {
         vel.linear.x = 0.0;
         vel.angular.z = M_PI / 2; // Turn left to avoid the area
+        revisiting = true;
         vel_pub.publish(vel);
         ros::Duration(0.5).sleep();
         return;
+    }
+    else if (revisiting){
+        vel.anuglar.z = 0.0;
     }
 
     // If an obstacle is directly in front, turn away
