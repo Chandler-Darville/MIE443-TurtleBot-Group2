@@ -13,14 +13,16 @@
 
 #include <chrono>
 
-float angular = 0.0;
-float linear = 0.0;
-
-double posX=0.0, posY=0.0, yaw=0.0;
+float angular;
+float linear;
+float minDistRight, minDistLeft, minDistCenter;
+double posX, posY, yaw;
+int numberOfConsecutiveTurns=0;
 
 #define N_BUMPER (3)
 #define RAD2DEG(rad)((rad)*180./M_PI)
 #define DEG2RAD(deg)((deg)*M_PI/180.)
+bool leftState, centerState, rightState;
 
 
 uint8_t bumper[3] = {kobuki_msgs::BumperEvent::RELEASED,kobuki_msgs::BumperEvent::RELEASED, kobuki_msgs::BumperEvent::RELEASED};
@@ -29,9 +31,10 @@ void bumperCallback(const kobuki_msgs::BumperEvent::ConstPtr& msg)
 {
 	//Access using bumper[kobuki_msgs::BumperEvent::{}] LEFT, CENTER, or RIGHT
     bumper[msg->bumper] = msg->state;
-//     bool leftState = bumper[kobuki_msgs::BumperEvent::LEFT];
-//     bool centerState = bumper[kobuki_msgs::BumperEvent::CENTER];
-//     bool rightState = bumper[kobuki_msgs::BumperEvent::RIGHT];
+    leftState = bumper[kobuki_msgs::BumperEvent::LEFT];
+    centerState = bumper[kobuki_msgs::BumperEvent::CENTER];
+    rightState = bumper[kobuki_msgs::BumperEvent::RIGHT];
+
 }
 
 float minLaserDistCenter = std::numeric_limits <float> ::infinity();
@@ -41,6 +44,8 @@ int32_t nLasers = 0, desiredNLasersCenter = 0, desiredNLasersLeft = 0, desiredNL
 
 void laserCallback(const sensor_msgs::LaserScan::ConstPtr& msg)
 {
+
+
 	minLaserDistCenter=std::numeric_limits<float>::infinity();
     minLaserDistLeft=std::numeric_limits<float>::infinity();
     minLaserDistRight=std::numeric_limits<float>::infinity();
@@ -66,7 +71,8 @@ void laserCallback(const sensor_msgs::LaserScan::ConstPtr& msg)
         {
             minLaserDistCenter=0;
         }
-        ROS_INFO("Minimum Laser Dist CENTER: %f",minLaserDistCenter);
+        //ROS_INFO("Minimum Laser Dist CENTER: %f",minLaserDistCenter);
+        minDistCenter= minLaserDistCenter;
     }
     else // if the desired angle is not in the cone (probably not useful)
     {
@@ -74,12 +80,13 @@ void laserCallback(const sensor_msgs::LaserScan::ConstPtr& msg)
         {
             minLaserDistCenter = std::min(minLaserDistCenter, msg->ranges[laser_idx]);
         }
-        // ROS_INFO("Minimum Laser Dist: %i",minLaserDistCenter);
+        //ROS_INFO("Minimum Laser Dist: %i",minLaserDistCenter);
         
         if(minLaserDistCenter==std::numeric_limits <float> ::infinity())
         {
             minLaserDistCenter=0;
         }
+        minDistCenter=minLaserDistCenter;
     }
 
 //Minimum distance on the right
@@ -93,7 +100,8 @@ void laserCallback(const sensor_msgs::LaserScan::ConstPtr& msg)
         {
             minLaserDistRight=0;
         }
-        ROS_INFO("Minimum Laser Dist RIGHT: %f",minLaserDistRight);
+        //ROS_INFO("Minimum Laser Dist RIGHT: %f",minLaserDistRight);
+        minDistRight= minLaserDistRight;
     }
     else{
         for(uint32_t laser_idx = 0; laser_idx<nLasers; ++laser_idx)
@@ -104,7 +112,8 @@ void laserCallback(const sensor_msgs::LaserScan::ConstPtr& msg)
         {
             minLaserDistRight=0;
         }
-        ROS_INFO("Minimum Laser Dist RIGHT: %f",minLaserDistRight);
+        //ROS_INFO("Minimum Laser Dist RIGHT: %f",minLaserDistRight);
+        minDistRight=minLaserDistRight;
     }
 
 
@@ -121,7 +130,8 @@ void laserCallback(const sensor_msgs::LaserScan::ConstPtr& msg)
                 minLaserDistLeft=0;
         }
 
-        ROS_INFO("Minimum Laser Dist LEFT: %f",minLaserDistLeft);
+        //ROS_INFO("Minimum Laser Dist LEFT: %f",minLaserDistLeft);
+        minDistLeft=minLaserDistLeft;
     }
     else
     {
@@ -135,11 +145,9 @@ void laserCallback(const sensor_msgs::LaserScan::ConstPtr& msg)
             minLaserDistLeft=0;
         }
 
-        ROS_INFO("Minimum Laser Dist LEFT: %f",minLaserDistLeft);
+        //ROS_INFO("Minimum Laser Dist LEFT: %f",minLaserDistLeft);
+        minDistLeft=minLaserDistLeft;
     }
-
-    
-    ros::Duration(0.5).sleep();
 }
 
 void odomCallback(const nav_msgs::Odometry::ConstPtr& msg)
@@ -147,7 +155,7 @@ void odomCallback(const nav_msgs::Odometry::ConstPtr& msg)
     posX = msg->pose.pose.position.x;
     posY = msg->pose.pose.position.y;
     yaw = tf::getYaw(msg->pose.pose.orientation);
-    ROS_INFO("Position: (%f, %f) Orientation: %f rad or %f degrees.", posX, posY, yaw, RAD2DEG(yaw));
+    //ROS_INFO("Position: (%f, %f) Orientation: %f rad or %f degrees.", posX, posY, yaw, RAD2DEG(yaw));
 }
 
 int main(int argc, char **argv)
@@ -168,14 +176,23 @@ int main(int argc, char **argv)
 
     // contest count down timer
     std::chrono::time_point<std::chrono::system_clock> start;
+    std::chrono::time_point<std::chrono::system_clock> beginning_time;
+
+    std::chrono::time_point<std::chrono::system_clock> cornerTimes[3];
+    cornerTimes[0]=std::chrono::system_clock::now();
+    cornerTimes[1]=std::chrono::system_clock::now();
+    cornerTimes[2] =std::chrono::system_clock::now();
     start = std::chrono::system_clock::now();
     uint64_t secondsElapsed = 0;
 
     float angular = 0.0;
     float linear = 0.0;
-
+    double lastYaw;
+    int corner =0, direction = 1;
     while(ros::ok() && secondsElapsed <= 480) {
         ros::spinOnce();
+        beginning_time = std::chrono::system_clock::now();
+
         
         // //Check if any of the bumpers were pressed
         // bool any_bumper_pressed = false;
@@ -225,7 +242,7 @@ int main(int argc, char **argv)
         //     vel_pub.publish(vel);
         // }
 
-        // //Control  logic after bumpers were pressed
+        //Control  logic after bumpers were pressed
         // if (posX<0.5 && yaw < M_PI/12 && !any_bumper_pressed){
         //     angular = 0.0;
         //     linear = 0.2;
@@ -247,6 +264,137 @@ int main(int argc, char **argv)
         // vel_pub.publish(vel);
 
         // The last thing to do is to update the timer.
+        
+        
+
+        if (centerState)
+        {   
+            linear = -0.25;
+            angular =0;
+            vel.linear.x= linear;
+            vel.angular.z = angular;
+            while(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now()-beginning_time).count()<1)
+            {
+                vel_pub.publish(vel);
+            }
+            
+        }
+        else if(leftState)
+        {
+            linear = -0.25;
+            angular =M_PI/2;
+            vel.linear.x= linear;
+            vel.angular.z = angular;
+            while(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now()-beginning_time).count()<1)
+            {
+                vel_pub.publish(vel);
+            }
+            
+        }
+        else if(rightState)
+        {
+            linear = -0.25;
+            angular =-M_PI/2;
+            vel.linear.x= linear;
+            vel.angular.z = angular;
+            while(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now()-beginning_time).count()<1)
+            {
+                vel_pub.publish(vel);
+            }
+            
+        }
+        else{
+            
+
+            if (minDistCenter<0.5)
+            {
+                
+                linear=0;
+                                                        
+                if (corner >=2 && (cornerTimes[0]-cornerTimes[1]).count()<15)     // odd direction turn left, even turn right when stuck
+                {                                          // if stuck in 2 corners within 15 secs, switch turning direction
+                    ++direction;
+                }
+                if(numberOfConsecutiveTurns>5 && direction%2!=0)      // keep turning to left if robot has tried to adjust itself for 6 times while standing still
+                {
+                    angular=M_PI/2;
+                    vel.linear.x= linear;
+                    vel.angular.z = angular;
+                    vel_pub.publish(vel);
+                    for(int i = 0; i<1; ++i)
+                    {
+                        cornerTimes[i]=cornerTimes[i+1];
+                    }
+                    cornerTimes[1]=std::chrono::system_clock::now();
+                    ++corner;
+                }
+                else if (numberOfConsecutiveTurns>5 && direction%2==0)
+                {
+                    angular=-M_PI/2;
+                    vel.linear.x= linear;
+                    vel.angular.z = angular;
+                    vel_pub.publish(vel);
+                    for(int i = 0; i<1; ++i)
+                    {
+                        cornerTimes[i]=cornerTimes[i+1];
+                    }
+                    cornerTimes[1]=std::chrono::system_clock::now();
+                    ++corner;
+                }
+                else
+                {
+                    //turn to whichever side has more space
+                    if (minDistRight<minDistLeft)      
+                    {
+                        angular = M_PI/2;
+                        vel.angular.z = angular;
+                        vel.linear.x = linear;
+                        vel_pub.publish(vel);
+                        ++numberOfConsecutiveTurns;
+                    }
+                    else
+                    {
+                        angular= -M_PI/2;
+                        vel.angular.z = angular;
+                        vel.linear.x = linear;
+                        vel_pub.publish(vel);
+                        ++numberOfConsecutiveTurns;
+                    }
+                }
+            }
+            else if (minDistLeft<1||minDistRight<1)
+            {
+                if (minDistRight<minDistLeft)
+                {
+                    numberOfConsecutiveTurns=0;
+                    linear = 0.25;
+                    angular = M_PI/6;
+                    vel.angular.z = angular;
+                    vel.linear.x = linear;
+                    vel_pub.publish(vel);
+                }
+                
+                else
+                {
+                    numberOfConsecutiveTurns=0;
+                    linear=0.25;
+                    angular = -M_PI/6;
+                    vel.angular.z = angular;
+                    vel.linear.x = linear;
+                    vel_pub.publish(vel);
+                }
+            }
+            else
+            {
+                numberOfConsecutiveTurns=0;
+                linear=0.25;
+                angular = 0;
+                vel.angular.z = angular;
+                vel.linear.x = linear;
+                vel_pub.publish(vel);
+            }    
+        
+        }
         secondsElapsed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now()-start).count();
         loop_rate.sleep();
     }
