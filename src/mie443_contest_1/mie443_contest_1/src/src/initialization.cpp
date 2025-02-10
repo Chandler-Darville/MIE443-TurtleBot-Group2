@@ -34,7 +34,7 @@ int collectLaserScan(float ranges[ranges_size], int pos) {     // pos = 0,1,2,3,
 
 }
 
-void fullScan(const sensor_msgs::LaserScan::ConstPtr& msg) {
+void fullScan(const sensor_msgs::LaserScan::ConstPtr& msgLaser) {
 
     int pos = 0;
 
@@ -53,7 +53,7 @@ void fullScan(const sensor_msgs::LaserScan::ConstPtr& msg) {
             break;
         }
 
-        ranges = msg->ranges;
+        ranges = msgLaser->ranges;
 
         pos = collectLaserScan(ranges, pos);
     }
