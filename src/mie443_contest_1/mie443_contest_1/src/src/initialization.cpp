@@ -59,3 +59,58 @@ void fullScan(const sensor_msgs::LaserScan::ConstPtr& msg) {
     }
 
 }
+
+/*
+
+#include <iostream>
+#include <vector>
+#include <cmath>
+
+struct PathInfo {
+    float heading;  // Optimal heading in degrees
+    float distance; // Corresponding maximum distance
+};
+
+PathInfo findOptimalPath(const std::vector<float>& scanData) {
+    const int scanSize = 960;
+    const float fieldOfView = 360.0f; // Full circle scan
+    const float anglePerIndex = fieldOfView / scanSize;
+    const float robotWidth = 0.34f; // 340 mm converted to meters
+
+    // Convert robot width to an angular span
+    float angularSpan = (robotWidth / (*std::max_element(scanData.begin(), scanData.end()))) * (180.0 / M_PI);
+    int minSegmentSize = std::ceil(angularSpan / anglePerIndex);
+
+    int bestStart = -1, bestLength = 0;
+    float maxDistance = 0.0f;
+    
+    int currentStart = -1, currentLength = 0;
+    for (int i = 0; i < scanSize; ++i) {
+        if (scanData[i] > robotWidth) {
+            if (currentStart == -1) currentStart = i;
+            currentLength++;
+        } else {
+            if (currentLength >= minSegmentSize && scanData[currentStart + currentLength / 2] > maxDistance) {
+                bestStart = currentStart;
+                bestLength = currentLength;
+                maxDistance = scanData[currentStart + currentLength / 2];
+            }
+            currentStart = -1;
+            currentLength = 0;
+        }
+    }
+
+    // Final check in case the best path is at the end
+    if (currentLength >= minSegmentSize && scanData[currentStart + currentLength / 2] > maxDistance) {
+        bestStart = currentStart;
+        bestLength = currentLength;
+        maxDistance = scanData[currentStart + currentLength / 2];
+    }
+
+    // Compute the best heading
+    float bestHeading = (bestStart + bestLength / 2) * anglePerIndex;
+
+    return {bestHeading, maxDistance};
+}
+
+*/
