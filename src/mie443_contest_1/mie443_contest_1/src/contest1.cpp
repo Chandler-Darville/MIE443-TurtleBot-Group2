@@ -13,49 +13,21 @@
 
 #include <chrono>
 
-//might fail:
-#include <vector>
-#include <set>
-
 float angular = 0.0;
 float linear = 0.2;
 
+// Global Variables to stores robot position
 double posX = 0.0, posY = 0.0, yaw = 0.0;
-//std::vector<std::pair<double, double>> visited_cells;
+std::vector<std::pair<double, double>> visited_positions;
 
-std::vector<std::pair<int, int>> visited_cells;
-
-const double grid_resolution = 0.3; // meters
+// Threshold for detecting revisited locations
 const double revisit_threshold = 0.3; // meters
-
-// Convert (x, y) to discrete grid coordinates
-std::pair<int, int> getGridCell(double x, double y)
-{
-    int grid_x = static_cast<int>(x / grid_resolution);
-    int grid_y = static_cast<int>(y / grid_resolution);
-    return {grid_x, grid_y};
-}
 
 #define N_BUMPER (3)
 #define RAD2DEG(rad) ((rad) * 180. / M_PI)
 #define DEG2RAD(deg) ((deg) * M_PI / 180.)
 
 uint8_t bumper[3] = {kobuki_msgs::BumperEvent::RELEASED, kobuki_msgs::BumperEvent::RELEASED, kobuki_msgs::BumperEvent::RELEASED};
-
-
-// Check if the robot is revisiting a grid cell
-bool isRevisiting()
-{
-    std::pair<int, int> current_cell = getGridCell(posX, posY);
-    for (const auto &cell : visited_cells)
-    {
-        if (cell == current_cell)
-        {
-            return true;
-        }
-    }
-    return false;
-}
 
 void bumperCallback(const kobuki_msgs::BumperEvent::ConstPtr &msg)
 {
@@ -245,8 +217,22 @@ void odomCallback(const nav_msgs::Odometry::ConstPtr &msg)
 //         vel_pub.publish(vel);
 //         ros::Duration(1.5).sleep();
 //     }
-
 // }
+
+// Function to check if the robot is revisiting an area
+bool isRevisiting()
+{
+    for (const auto &pos : visited_positions)
+    {
+        double distance = std::hypot(posX - pos.first, posY - pos.second);
+        if (distance < revisit_threshold)
+        {
+            ROS_WARN("Revisiting detected! Adjusting path...");
+            return true;
+        }
+    }
+    return false;
+}
 
 void explore(geometry_msgs::Twist &vel, ros::Publisher &vel_pub)
 {
@@ -271,16 +257,15 @@ void explore(geometry_msgs::Twist &vel, ros::Publisher &vel_pub)
         return; // Exit function after turning
     }   
 
-    // // Prevent revisiting explored grid cells
-    // if (isRevisiting())
-    // {
-    //     ROS_WARN("Revisiting detected! Adjusting path...");
-    //     vel.linear.x = 0.0;
-    //     vel.angular.z = M_PI / 2; // Turn left to avoid the area
-    //     vel_pub.publish(vel);
-    //     ros::Duration(0.5).sleep();
-    //     return;
-    // }
+    // Prevent revisiting explored areas
+    if (isRevisiting())
+    {
+        vel.linear.x = 0.0;
+        vel.angular.z = M_PI / 2; // Turn left to avoid the area
+        vel_pub.publish(vel);
+        ros::Duration(0.5).sleep();
+        return;
+    }
 
     // If an obstacle is directly in front, turn away
     if (front_dist < front_threshold)
@@ -320,8 +305,8 @@ void explore(geometry_msgs::Twist &vel, ros::Publisher &vel_pub)
         vel_pub.publish(vel);
         ros::Duration(0.1).sleep();  // Small sleep for smooth movement
 
-        // Store new position in visited grid cells
-        visited_cells.push_back(getGridCell(posX, posY));
+        // Store new position in visited locations
+        visited_positions.push_back({posX, posY});
     }
 }
 
