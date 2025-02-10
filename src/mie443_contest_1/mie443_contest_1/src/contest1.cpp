@@ -267,18 +267,13 @@ void explore(geometry_msgs::Twist &vel, ros::Publisher &vel_pub)
     //     return;
     // }
 
-    static bool revisting = false;
     if (isRevisiting())
     {
         vel.linear.x = 0.0;
         vel.angular.z = M_PI / 2; // Turn left to avoid the area
-        revisiting = true;
         vel_pub.publish(vel);
         ros::Duration(0.5).sleep();
         return;
-    }
-    else if (revisiting){
-        vel.anuglar.z = 0.0;
     }
 
     // If an obstacle is directly in front, turn away
@@ -319,8 +314,8 @@ void explore(geometry_msgs::Twist &vel, ros::Publisher &vel_pub)
         vel_pub.publish(vel);
         ros::Duration(0.1).sleep();  // Small sleep for smooth movement
 
-        // Store new position in visited locations
-        visited_positions.push_back({posX, posY});
+        // // Store new position in visited locations
+        // visited_positions.push_back({posX, posY});
     }
 }
 
@@ -364,7 +359,6 @@ int main(int argc, char **argv)
         vel.angular.z = angular;
         vel.linear.x = linear;
         vel_pub.publish(vel);
-
 
         // The last thing to do is to update the timer.
         secondsElapsed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - start).count();
