@@ -267,6 +267,22 @@ void explore(geometry_msgs::Twist &vel, ros::Publisher &vel_pub)
         vel_pub.publish(vel);
         ros::Duration(1.5).sleep(); // Allow time to turn
         return; // Exit function after turning
+
+        while (minLaserDistCenter > wall_distance)
+        {
+            vel.linear.x = 0.2;
+            vel.angular.z = 0.0; // Rotate 180 degrees
+            vel_pub.publish(vel);
+            ros::Duration(0.1).sleep(); // Allow time to turn
+            return; // Exit function after turning 
+        }
+
+        ROS_WARN("Wall detected! Turning right...");
+        vel.linear.x = 0.0;
+        vel.angular.z = -M_PI/1.5; // Rotate 180 degrees
+        vel_pub.publish(vel);
+        ros::Duration(1.5).sleep(); // Allow time to turn
+        return;
     }   
 
     // if (isRevisiting())
