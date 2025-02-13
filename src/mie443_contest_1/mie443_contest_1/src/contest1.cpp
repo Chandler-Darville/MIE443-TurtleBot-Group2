@@ -188,6 +188,7 @@ int main(int argc, char **argv)
     float angular = 0.0;
     float linear = 0.0;
     double lastYaw;
+    bool stuck= false;
     int corner =0, direction = 1;
     while(ros::ok() && secondsElapsed <= 480) {
         ros::spinOnce();
@@ -326,7 +327,7 @@ int main(int argc, char **argv)
                         cornerTimes[i]=cornerTimes[i+1];
                     }
                     cornerTimes[1]=std::chrono::system_clock::now();
-                    ++corner;
+                    bool stuck = true;
                 }
                 else if (numberOfConsecutiveTurns>5 && direction%2==0)
                 {
@@ -339,10 +340,15 @@ int main(int argc, char **argv)
                         cornerTimes[i]=cornerTimes[i+1];
                     }
                     cornerTimes[1]=std::chrono::system_clock::now();
-                    ++corner;
+                    bool stuck = true;
                 }
                 else
                 {
+                    if (stuck == true)
+                    {
+                        ++corner;
+                    }
+                    stuck = false;
                     //turn to whichever side has more space
                     if (minDistRight<minDistLeft)      
                     {
@@ -363,29 +369,37 @@ int main(int argc, char **argv)
                 }
             }
             else if (minDistLeft<1||minDistRight<1)
-            {
+            {   
+                if (stuck == true)
+                    {
+                        ++corner;
+                    }
+                    stuck = false;
+                numberOfConsecutiveTurns=0;
+                linear = 0.25;
+
                 if (minDistRight<minDistLeft)
-                {
-                    numberOfConsecutiveTurns=0;
-                    linear = 0.25;
+                {      
                     angular = M_PI/6;
-                    vel.angular.z = angular;
-                    vel.linear.x = linear;
-                    vel_pub.publish(vel);
                 }
                 
                 else
                 {
-                    numberOfConsecutiveTurns=0;
-                    linear=0.25;
                     angular = -M_PI/6;
-                    vel.angular.z = angular;
-                    vel.linear.x = linear;
-                    vel_pub.publish(vel);
                 }
+
+                vel.angular.z = angular;
+                vel.linear.x = linear;
+                vel_pub.publish(vel);
             }
             else
             {
+                if (stuck == true)
+                    {
+                        ++corner;
+                    }
+                stuck = false;
+
                 numberOfConsecutiveTurns=0;
                 linear=0.25;
                 angular = 0;
