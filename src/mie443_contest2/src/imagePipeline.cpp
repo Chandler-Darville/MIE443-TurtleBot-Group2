@@ -35,6 +35,42 @@ int ImagePipeline::getTemplateID(Boxes& boxes) {
     } else {
         /***YOUR CODE HERE***/
         // Use: boxes.templates
+
+
+        //////// Code for testing //////////
+        cv::Mat grayImg;
+        cv::cvtColor(img, grayImg, cv::COLOR_BGR2GRAY);
+
+        double bestMatchScore = std::numeric_limits<double>::max(); // Lower is better
+        int bestMatchIndex = -1;
+
+        for (size_t i = 0; i < boxes.templates.size(); ++i) {
+            if (boxes.templates[i].empty()) {
+                std::cout << "Template " << i << " is empty, skipping..." << std::endl;
+                continue;
+            }
+
+            cv::Mat result;
+            cv::matchTemplate(grayImg, boxes.templates[i], result, cv::TM_SQDIFF_NORMED);
+            double minVal, maxVal;
+            cv::minMaxLoc(result, &minVal, &maxVal);
+
+            if (minVal < bestMatchScore) {
+                bestMatchScore = minVal;
+                bestMatchIndex = i;
+            }
+        }
+
+        if (bestMatchIndex != -1) {
+            std::cout << "Best matching template ID: " << bestMatchIndex 
+                      << " with score: " << bestMatchScore << std::endl;
+            template_id = bestMatchIndex;
+        } else {
+            std::cout << "No good match found!" << std::endl;
+        }
+
+
+
         cv::imshow("view", img);
         cv::waitKey(10);
     }  
