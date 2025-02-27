@@ -189,6 +189,7 @@ void laserCallback(const sensor_msgs::LaserScan::ConstPtr& msg)
         }
 
         ROS_INFO("Minimum Laser Dist LEFT: %f",minLaserDistLeft);
+
     }
 
     
