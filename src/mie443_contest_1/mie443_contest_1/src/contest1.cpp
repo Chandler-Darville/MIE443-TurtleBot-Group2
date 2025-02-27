@@ -38,27 +38,23 @@ void bumperCallback(const kobuki_msgs::BumperEvent::ConstPtr& msg)
 
 void laserCallback(const sensor_msgs::LaserScan::ConstPtr& msg)
 {
-	minLaserDist=std::numeric_limits<float>::infinity();
-    
-    nLasers=(msg->angle_max-msg->angle_min)/msg->angle_increment;
-    desiredNLasers=DEG2RAD(desiredAngle)/msg->angle_increment;
-    ROS_INFO("Size of laser scan array: %i and size of offset: %i",nLasers,desiredNLasers); // offset is the number of sectors from the center sector
+    minLaserDist = std::numeric_limits<float>::infinity();
+    nLasers = (msg->angle_max - msg->angle_min) / msg->angle_increment;
+    desiredNLasers = DEG2RAD(desiredAngle) / msg->angle_increment;
+    ROS_INFO("Size of laser scan array: %i and size of offset: %i", nLasers, desiredNLasers);
 
-    if(desiredAngle*M_PI/180<msg->angle_max&&-desiredAngle*M_PI/180>msg->angle_min) //if the desired angle is within the size of the cone
-    {
-        for(uint32_t laser_idx = nLasers/2-desiredNLasers; laser_idx < nLasers/2 + desiredNLasers;++laser_idx)
-        {
-            minLaserDist=std::min(minLaserDist,msg->ranges[laser_idx]);
+    if ( (DEG2RAD(desiredAngle) < msg->angle_max) && (-DEG2RAD(desiredAngle) > msg->angle_min) ) {
+
+        for (uint32_t laser_idx = (nLasers/2) - desiredNLasers; laser_idx < (nLasers/2) + desiredNLasers; ++laser_idx) {
+            minLaserDist = std::min(minLaserDist, msg->ranges[laser_idx]);
+            
+            ROS_INFO("Minimum Laser Dist:",minLaserDist);
         }
-        ROS_INFO("Minimum Laser Dist:",minLaserDist);
     }
-    else // if the desired angle is not in the cone (probably not useful)
-    {
-        for(uint32_t laser_idx = 0; laser_idx<nLasers; ++laser_idx)
-        {
+    else {
+        for (uint32_t laser_idx = 0; laser_idx < nLasers; ++laser_idx) {
             minLaserDist = std::min(minLaserDist, msg->ranges[laser_idx]);
         }
-        ROS_INFO("Minimum Laser Dist:",minLaserDist);
     }
 }
 
