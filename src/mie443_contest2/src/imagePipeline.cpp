@@ -223,7 +223,10 @@ int ImagePipeline::getTemplateID(Boxes& boxes) {
         cv::Mat img_with_keypoints;
         cv::drawKeypoints(img, keypoints_img, img_with_keypoints);
         cv::imshow("SURF Keypoints", img_with_keypoints);
-        cv::waitKey(10);
+        //std::cout<<"Template id:" <<template_id <<std::endl;
+        cv::waitKey(1);
     }  
+
+    std::cout<<"Template id:" <<template_id <<std::endl;
     return template_id;
 }
