@@ -1,6 +1,6 @@
 #include <iostream>
 #include "opencv2/core.hpp"
-#ifdef HAVE_OPENCV_XFEATURES2D
+//#ifdef HAVE_OPENCV_XFEATURES2D
 #include "opencv2/calib3d.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
@@ -57,7 +57,7 @@ int main(int argc, char*argv[])
 
     //Draw matches
     Mat img_matches;
-    drawMatches(img_object,keypoints_object,img_scene,keypoints_scene,good_matches,img_matches,img_matches,Scalar::all(-1),Scalar::all(-1),std::vector<char>(),DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
+    drawMatches(img_object,keypoints_object,img_scene,keypoints_scene,good_matches,img_matches,Scalar::all(-1),Scalar::all(-1),std::vector<char>(),DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
 
     //Localize the object
     std::vector<Point2f> obj;
@@ -80,10 +80,10 @@ int main(int argc, char*argv[])
     perspectiveTransform(obj_corners,scene_corners,H);
 
     //Draw lines between the corners (the mapped object in the scene - image_2)
-    line(img_matches,scene_corners[0]+Point2f((float)img_object.cols,0),scene_corner[1]+Point2f((float)img_object.cols,0),Scalar(0,255,0),4);
-    line(img_matches,scene_corners[1]+Point2f((float)img_object.cols,0),scene_corner[2]+Point2f((float)img_object.cols,0),Scalar(0,255,0),4);
-    line(img_matches,scene_corners[2]+Point2f((float)img_object.cols,0),scene_corner[3]+Point2f((float)img_object.cols,0),Scalar(0,255,0),4);
-    line(img_matches,scene_corners[3]+Point2f((float)img_object.cols,0),scene_corner[4]+Point2f((float)img_object.cols,0),Scalar(0,255,0),4);
+    line(img_matches,scene_corners[0]+Point2f((float)img_object.cols,0),scene_corners[0]+Point2f((float)img_object.cols,0),Scalar(0,255,0),4);
+    line(img_matches,scene_corners[1]+Point2f((float)img_object.cols,0),scene_corners[1]+Point2f((float)img_object.cols,0),Scalar(0,255,0),4);
+    line(img_matches,scene_corners[2]+Point2f((float)img_object.cols,0),scene_corners[2]+Point2f((float)img_object.cols,0),Scalar(0,255,0),4);
+    line(img_matches,scene_corners[3]+Point2f((float)img_object.cols,0),scene_corners[3]+Point2f((float)img_object.cols,0),Scalar(0,255,0),4);
     //Show detected matches
     imshow("Good Matches & Object detection", img_matches);
     waitKey();
