@@ -128,129 +128,77 @@
 //     return template_id;
 // }
 
+////////////////////////////////////////////////////////////////////////////////////////////
 
+#include <opencv2/xfeatures2d.hpp>
+#include <opencv2/features2d.hpp>
+#include <opencv2/flann.hpp>
 
+int ImagePipeline::getTemplateID(Boxes& boxes) {
+    int template_id = -1;
+    if(!isValid) {
+        std::cout << "ERROR: INVALID IMAGE!" << std::endl;
+    } else if(img.empty() || img.rows <= 0 || img.cols <= 0) {
+        std::cout << "ERROR: VALID IMAGE, BUT STILL A PROBLEM EXISTS!" << std::endl;
+        std::cout << "img.empty():" << img.empty() << std::endl;
+        std::cout << "img.rows:" << img.rows << std::endl;
+        std::cout << "img.cols:" << img.cols << std::endl;
+    } else {
+        // Initialize SURF detector
+        cv::Ptr<cv::xfeatures2d::SURF> detector = cv::xfeatures2d::SURF::create(500);  // 500 is the Hessian threshold
+        cv::Ptr<cv::xfeatures2d::SURF> extractor = cv::xfeatures2d::SURF::create();
 
-/////////////////// Test Code//////////////
-#include <iostream>
-#include "opencv2/core.hpp"
-#ifdef HAVE_OPENCV_XFEATURES2D
-#include "opencv2/calib3d.hpp"
-#include "opencv2/highgui.hpp"
-#include "opencv2/imgproc.hpp"
-#include "opencv2/features2d.hpp"
-#include "opencv2/xfeatures2d.hpp"
-using namespace cv;
-using namespace cv::xfeatures2d;
-using std::cout;
-using std::endl;
+        // Detect keypoints and descriptors in the current image
+        std::vector<cv::KeyPoint> keypoints_img;
+        cv::Mat descriptors_img;
+        detector->detectAndCompute(img, cv::noArray(), keypoints_img, descriptors_img);
 
-#include <imagePipeline.h>
+        // Iterate through the templates in boxes.templates (you will need to modify the 'Boxes' class to store template images)
+        for (int i = 0; i < boxes.templates.size(); i++) {
+            cv::Mat template_img = boxes.templates[i];
 
-#define IMAGE_TYPE sensor_msgs::image_encodings::BGR8
-#define IMAGE_TOPIC "camera/image"
+            // Detect keypoints and descriptors in the template image
+            std::vector<cv::KeyPoint> keypoints_template;
+            cv::Mat descriptors_template;
+            detector->detectAndCompute(template_img, cv::noArray(), keypoints_template, descriptors_template);
 
-const char* keys =
-"{help h || Print help message.}"
-"{input1 | box.png | Path to input image 1.}"
-"{input2 | box_in_scene.png | Path to input image 2.}";
+            // Use FLANN to match the descriptors
+            cv::FlannBasedMatcher matcher;
+            std::vector<cv::DMatch> matches;
+            matcher.match(descriptors_img, descriptors_template, matches);
 
-int main(int argc, char* argv[])
-{
-    CommandLineParser parser(argc, argv, keys);
-    if (!parser.has("input1") || !parser.has("input2")) {
-        cout << "ERROR: Missing input images!" << endl;
-        parser.printMessage();
-        return -1;
-    }
+            // Evaluate the matches (you can apply a distance threshold to filter out bad matches)
+            double max_dist = 0;
+            double min_dist = 100;
 
-    Mat img_object = imread(parser.get<String>("input1"), IMREAD_GRAYSCALE);
-    Mat img_scene = imread(parser.get<String>("input2"), IMREAD_GRAYSCALE);
+            for (int i = 0; i < descriptors_img.rows; i++) {
+                double dist = matches[i].distance;
+                if (dist < min_dist) min_dist = dist;
+                if (dist > max_dist) max_dist = dist;
+            }
 
-    if (img_object.empty() || img_scene.empty()) {
-        cout << "Could not open or find the image!\n" << endl;
-        return -1;
-    }
+            std::cout << "-- Max dist : " << max_dist << " ; Min dist : " << min_dist << std::endl;
 
-    // STEP 1: DETECT KEYPOINTS USING SURF
-    int minHessian = 400;
-    Ptr<SURF> detector = SURF::create(minHessian);
-    std::vector<KeyPoint> keypoints_object, keypoints_scene;
-    Mat descriptors_object, descriptors_scene;
-    
-    detector->detectAndCompute(img_object, noArray(), keypoints_object, descriptors_object);
-    detector->detectAndCompute(img_scene, noArray(), keypoints_scene, descriptors_scene);
+            // If a sufficient number of good matches are found, consider this template a match
+            int good_matches = 0;
+            for (int i = 0; i < matches.size(); i++) {
+                if (matches[i].distance <= std::max(2 * min_dist, 0.02)) {
+                    good_matches++;
+                }
+            }
 
-    if (descriptors_object.empty() || descriptors_scene.empty()) {
-        cout << "ERROR: No descriptors found!" << endl;
-        return -1;
-    }
-
-    // Convert descriptors to CV_32F for FLANN
-    descriptors_object.convertTo(descriptors_object, CV_32F);
-    descriptors_scene.convertTo(descriptors_scene, CV_32F);
-
-    // STEP 2: MATCH DESCRIPTORS USING FLANN
-    Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create(DescriptorMatcher::FLANNBASED);
-    std::vector<std::vector<DMatch>> knn_matches;
-    matcher->knnMatch(descriptors_object, descriptors_scene, knn_matches, 2);
-
-    // Lowe’s ratio test
-    const float ratio_thresh = 0.75f;
-    std::vector<DMatch> good_matches;
-    for (size_t i = 0; i < knn_matches.size(); i++) {
-        if (knn_matches[i][0].distance < ratio_thresh * knn_matches[i][1].distance) {
-            good_matches.push_back(knn_matches[i][0]);
+            // If the good matches exceed a threshold, consider it as a valid match
+            if (good_matches > 10) { // This threshold can be adjusted
+                template_id = i;
+                break;
+            }
         }
-    }
 
-    // STEP 3: DRAW MATCHES
-    Mat img_matches;
-    drawMatches(img_object, keypoints_object, img_scene, keypoints_scene, good_matches, img_matches,
-                Scalar::all(-1), Scalar::all(-1), std::vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
-
-    // STEP 4: LOCALIZE OBJECT
-    std::vector<Point2f> obj;
-    std::vector<Point2f> scene;
-    for (size_t i = 0; i < good_matches.size(); i++) {
-        obj.push_back(keypoints_object[good_matches[i].queryIdx].pt);
-        scene.push_back(keypoints_scene[good_matches[i].trainIdx].pt);
-    }
-
-    if (obj.size() < 4) {
-        cout << "ERROR: Not enough matches for homography!" << endl;
-        return -1;
-    }
-
-    Mat H = findHomography(obj, scene, RANSAC);
-    if (H.empty()) {
-        cout << "ERROR: Homography calculation failed!" << endl;
-        return -1;
-    }
-
-    // Get the corners from img_object
-    std::vector<Point2f> obj_corners(4);
-    obj_corners[0] = Point2f(0, 0);
-    obj_corners[1] = Point2f((float)img_object.cols, 0);
-    obj_corners[2] = Point2f((float)img_object.cols, (float)img_object.rows);
-    obj_corners[3] = Point2f(0, (float)img_object.rows);
-    
-    std::vector<Point2f> scene_corners(4);
-    perspectiveTransform(obj_corners, scene_corners, H);
-
-    // Draw lines between corners
-    line(img_matches, scene_corners[0] + Point2f((float)img_object.cols, 0), 
-         scene_corners[1] + Point2f((float)img_object.cols, 0), Scalar(0, 255, 0), 4);
-    line(img_matches, scene_corners[1] + Point2f((float)img_object.cols, 0), 
-         scene_corners[2] + Point2f((float)img_object.cols, 0), Scalar(0, 255, 0), 4);
-    line(img_matches, scene_corners[2] + Point2f((float)img_object.cols, 0), 
-         scene_corners[3] + Point2f((float)img_object.cols, 0), Scalar(0, 255, 0), 4);
-    line(img_matches, scene_corners[3] + Point2f((float)img_object.cols, 0), 
-         scene_corners[0] + Point2f((float)img_object.cols, 0), Scalar(0, 255, 0), 4);
-
-    // Show final image
-    imshow("Good Matches & Object detection", img_matches);
-    waitKey();
-
-    return 0;
+        // Display the image with keypoints for visualization
+        cv::Mat img_with_keypoints;
+        cv::drawKeypoints(img, keypoints_img, img_with_keypoints);
+        cv::imshow("SURF Keypoints", img_with_keypoints);
+        cv::waitKey(10);
+    }  
+    return template_id;
 }
