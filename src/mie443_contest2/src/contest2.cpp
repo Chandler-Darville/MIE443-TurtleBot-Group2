@@ -1,3 +1,4 @@
+
 #include <boxes.h>
 #include <navigation.h>
 #include <robot_pose.h>
@@ -23,15 +24,7 @@ int main(int argc, char** argv) {
                   << boxes.coords[i][2] << std::endl;
     }
     // Initialize image objectand subscriber.
-    ImagePipeline imagePipeline(n, boxes);
-
-    //----------------Test--------------------------
-
-    //variable to record identification of boxes
-    std::<<vector<int> boxIDs(boxes.coords.size());//recoding ids of boxes
-    int currentStop=0;
-
-    //----------------------------------------------
+    ImagePipeline imagePipeline(n);
 
     // contest count down timer
     std::chrono::time_point<std::chrono::system_clock> start;
@@ -44,13 +37,7 @@ int main(int argc, char** argv) {
         /***YOUR CODE HERE***/
         // Use: boxes.coords
         // Use: robotPose.x, robotPose.y, robotPose.phi
-
-        //------------------VISION CODE------------------
-        int ID=imagePipeline.getTemplateID(boxes,false);
-
-        // if (ID>=0) boxIDs[currentStop]=ID;//Good scan (error free)
-        //
-
+        imagePipeline.getTemplateID(boxes);
         ros::Duration(0.01).sleep();
     }
     return 0;
