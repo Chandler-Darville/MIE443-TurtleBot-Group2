@@ -139,11 +139,27 @@
 #define IMAGE_TYPE sensor_msgs::image_encodings::BGR8
 #define IMAGE_TOPIC "camera/rgb/image_raw" // kinect:"camera/rgb/image_raw" webcam:"camera/image"
 
-ImagePipeline::ImagePipeline(ros::NodeHandle& n) {
+ImagePipeline::ImagePipeline(ros::NodeHandle& n, Boxes& boxes) {
     image_transport::ImageTransport it(n);
     sub = it.subscribe(IMAGE_TOPIC, 1, &ImagePipeline::imageCallback, this);
     isValid = false;
+
+    //Preprocess all tags and store in boxes so this only has to happen once
+    for (int i=0; i<boxes.templates.size();i++)
+    {
+        tagPreprocess(boxes.templates[i]);
+    }
 }
+
+//------------------------Savo's----------------------------------------------
+void ImagePipeline::tagPreprocess(cv::Mat& tag)
+{
+    cv::resize(tag,tag,cv::Size(500,400)); //resize roughly to match aspect ratio on boxes
+    cv::GaussianBlur(tag,tag,cv::Size(3,3),0,0); //add blur to aid feature matching
+    cv::imshow("Tag as used",tagImage); //show image used in search
+}
+//----------------------------------------------------------------------------
+
 
 void ImagePipeline::imageCallback(const sensor_msgs::ImageConstPtr& msg) {
     try {
@@ -159,10 +175,12 @@ void ImagePipeline::imageCallback(const sensor_msgs::ImageConstPtr& msg) {
     }    
 }
 
-int ImagePipeline::getTemplateID(Boxes& boxes) {
-    int template_id = -1;
+int ImagePipeline::getTemplateID(Boxes& boxes, bool showInternals) {
+    int template_id = -1; //Default to error
     if(!isValid) {
         std::cout << "ERROR: INVALID IMAGE!" << std::endl;
+
+        return template_id;
     } else if(img.empty() || img.rows <= 0 || img.cols <= 0) {
         std::cout << "ERROR: VALID IMAGE, BUT STILL A PROBLEM EXISTS!" << std::endl;
         std::cout << "img.empty():" << img.empty() << std::endl;
@@ -177,6 +195,13 @@ int ImagePipeline::getTemplateID(Boxes& boxes) {
         std::vector<cv::KeyPoint> keypoints_img;
         cv::Mat descriptors_img;
         detector->detectAndCompute(img, cv::noArray(), keypoints_img, descriptors_img);
+
+        //----------------------------------------------------------------------------------
+        //find the id and confidence levels of the two highest rated candidates
+        float maxConfidence=0.0, secondConfidence=0.0;
+        uint8_t maxID=0;
+        Mat bestTag; //stores the best matched reference tag for display purpose
+        //----------------------------------------------------------------------------------
 
         // Iterate through the templates in boxes.templates (you will need to modify the 'Boxes' class to store template images)
         for (int i = 0; i < boxes.templates.size(); i++) {
@@ -211,6 +236,8 @@ int ImagePipeline::getTemplateID(Boxes& boxes) {
                     good_matches++;
                 }
             }
+            
+            std::cout<<"Good Matches: " << good_matches << std::endl;
 
             // If the good matches exceed a threshold, consider it as a valid match
             if (good_matches > 10) { // This threshold can be adjusted
