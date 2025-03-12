@@ -170,7 +170,7 @@ int ImagePipeline::getTemplateID(Boxes& boxes) {
         std::cout << "img.cols:" << img.cols << std::endl;
     } else {
         // Initialize SURF detector
-        cv::Ptr<cv::xfeatures2d::SURF> detector = cv::xfeatures2d::SURF::create(500);  // 500 is the Hessian threshold
+        cv::Ptr<cv::xfeatures2d::SURF> detector = cv::xfeatures2d::SURF::create(300);  // 500 is the Hessian threshold
         cv::Ptr<cv::xfeatures2d::SURF> extractor = cv::xfeatures2d::SURF::create();
 
         // Detect keypoints and descriptors in the current image
@@ -212,8 +212,10 @@ int ImagePipeline::getTemplateID(Boxes& boxes) {
                 }
             }
 
+            std::cout << "Good Matches: " << good_matches << std::endl;
+
             // If the good matches exceed a threshold, consider it as a valid match
-            if (good_matches > 10) { // This threshold can be adjusted
+            if (good_matches > 250) { // This threshold can be adjusted
                 template_id = i;
                 break;
             }
