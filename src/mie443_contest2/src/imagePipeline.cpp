@@ -233,35 +233,6 @@
 
 /////////////////////////Test Code////////////////////////
 
-#include <opencv2/xfeatures2d.hpp>
-#include <opencv2/features2d.hpp>
-#include <opencv2/flann.hpp>
-#include <opencv2/calib3d.hpp>
-#include <opencv2/highgui.hpp>
-#include <opencv2/imgproc.hpp>
-
-#include <imagePipeline.h>
-
-#define IMAGE_TYPE sensor_msgs::image_encodings::BGR8
-#define IMAGE_TOPIC "camera/rgb/image_raw" // Kinect or webcam
-
-ImagePipeline::ImagePipeline(ros::NodeHandle& n) {
-    image_transport::ImageTransport it(n);
-    sub = it.subscribe(IMAGE_TOPIC, 1, &ImagePipeline::imageCallback, this);
-    isValid = false;
-}
-
-void ImagePipeline::imageCallback(const sensor_msgs::ImageConstPtr& msg) {
-    try {
-        if(isValid) img.release();
-        img = (cv_bridge::toCvShare(msg, IMAGE_TYPE)->image).clone();
-        isValid = true;
-    } catch (cv_bridge::Exception& e) {
-        std::cout << "ERROR: Could not convert image!" << std::endl;
-        isValid = false;
-    }    
-}
-
 int ImagePipeline::getTemplateID(Boxes& boxes) {
     int template_id = -1;
     if (!isValid || img.empty()) {
@@ -270,7 +241,7 @@ int ImagePipeline::getTemplateID(Boxes& boxes) {
     }
 
     // Initialize SURF detector with Hessian threshold
-    int minHessian = 500;  // Adjust for better results
+    int minHessian = 500;  
     cv::Ptr<cv::xfeatures2d::SURF> detector = cv::xfeatures2d::SURF::create(minHessian);
 
     // Detect keypoints & descriptors in the input image
@@ -278,7 +249,10 @@ int ImagePipeline::getTemplateID(Boxes& boxes) {
     cv::Mat descriptors_img;
     detector->detectAndCompute(img, cv::noArray(), keypoints_img, descriptors_img);
 
-    // BFMatcher (Brute-Force) instead of FLANN for small descriptor sets
+    // Print number of keypoints in the input image
+    std::cout << "Captured Image Keypoints: " << keypoints_img.size() << std::endl;
+
+    // BFMatcher (Brute-Force) for descriptor matching
     cv::BFMatcher matcher(cv::NORM_L2, true);
 
     for (int i = 0; i < boxes.templates.size(); i++) {
@@ -289,47 +263,56 @@ int ImagePipeline::getTemplateID(Boxes& boxes) {
         cv::Mat descriptors_template;
         detector->detectAndCompute(template_img, cv::noArray(), keypoints_template, descriptors_template);
 
-        if (descriptors_img.empty() || descriptors_template.empty()) continue;
+        // Print number of keypoints in the template image
+        std::cout << "Template " << i << " Keypoints: " << keypoints_template.size() << std::endl;
+
+        if (descriptors_img.empty() || descriptors_template.empty()) {
+            std::cout << "Skipping template " << i << " due to empty descriptors!" << std::endl;
+            continue;
+        }
 
         // Match descriptors
         std::vector<cv::DMatch> matches;
         matcher.match(descriptors_img, descriptors_template, matches);
+        std::cout << "Template " << i << " - Total Matches: " << matches.size() << std::endl;
 
-        // Find min & max distances between keypoints
+        // Find min distance between keypoints
         double min_dist = 100, max_dist = 0;
-        for (size_t j = 0; j < matches.size(); j++) {
-            double dist = matches[j].distance;
+        for (const auto& match : matches) {
+            double dist = match.distance;
             if (dist < min_dist) min_dist = dist;
             if (dist > max_dist) max_dist = dist;
         }
 
         // Apply Lowe’s ratio test for filtering good matches
         std::vector<cv::DMatch> good_matches;
-        for (size_t j = 0; j < matches.size(); j++) {
-            if (matches[j].distance <= std::max(2 * min_dist, 0.02)) {
-                good_matches.push_back(matches[j]);
+        for (const auto& match : matches) {
+            if (match.distance <= std::max(2 * min_dist, 0.02)) {
+                good_matches.push_back(match);
             }
         }
 
-        // If enough good matches, assume a match
+        std::cout << "Template " << i << " - Good Matches: " << good_matches.size() << std::endl;
+
+        // If enough good matches exist, process further
         if (good_matches.size() > 10) {
             template_id = i;
+            std::cout << "Template " << i << " is a possible match!" << std::endl;
 
-            // Draw matches (for debugging)
+            // Draw matches for debugging
             cv::Mat img_matches;
             cv::drawMatches(img, keypoints_img, template_img, keypoints_template, good_matches, img_matches);
             cv::imshow("Good Matches", img_matches);
 
             // Find object bounding box in scene
             std::vector<cv::Point2f> obj, scene;
-            for (size_t j = 0; j < good_matches.size(); j++) {
-                obj.push_back(keypoints_template[good_matches[j].queryIdx].pt);
-                scene.push_back(keypoints_img[good_matches[j].trainIdx].pt);
+            for (const auto& match : good_matches) {
+                obj.push_back(keypoints_template[match.queryIdx].pt);
+                scene.push_back(keypoints_img[match.trainIdx].pt);
             }
 
-            if (obj.size() >= 4) {  // Need at least 4 points for Homography
+            if (obj.size() >= 4) {
                 cv::Mat H = cv::findHomography(obj, scene, cv::RANSAC);
-                
                 std::vector<cv::Point2f> obj_corners = {
                     {0, 0}, {template_img.cols, 0}, 
                     {template_img.cols, template_img.rows}, {0, template_img.rows} 
@@ -351,6 +334,6 @@ int ImagePipeline::getTemplateID(Boxes& boxes) {
         }
     }
 
-    std::cout << "Template ID: " << template_id << std::endl;
+    std::cout << "Final Template ID: " << template_id << std::endl;
     return template_id;
 }
