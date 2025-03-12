@@ -130,14 +130,120 @@
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 
+// #include <opencv2/xfeatures2d.hpp>
+// #include <opencv2/features2d.hpp>
+// #include <opencv2/flann.hpp>
+
+// #include <imagePipeline.h>
+
+// #define IMAGE_TYPE sensor_msgs::image_encodings::BGR8
+// #define IMAGE_TOPIC "camera/rgb/image_raw" // kinect:"camera/rgb/image_raw" webcam:"camera/image"
+
+// ImagePipeline::ImagePipeline(ros::NodeHandle& n) {
+//     image_transport::ImageTransport it(n);
+//     sub = it.subscribe(IMAGE_TOPIC, 1, &ImagePipeline::imageCallback, this);
+//     isValid = false;
+// }
+
+// void ImagePipeline::imageCallback(const sensor_msgs::ImageConstPtr& msg) {
+//     try {
+//         if(isValid) {
+//             img.release();
+//         }
+//         img = (cv_bridge::toCvShare(msg, IMAGE_TYPE)->image).clone();
+//         isValid = true;
+//     } catch (cv_bridge::Exception& e) {
+//         std::cout << "ERROR: Could not convert from " << msg->encoding.c_str()
+//                   << " to " << IMAGE_TYPE.c_str() << "!" << std::endl;
+//         isValid = false;
+//     }    
+// }
+
+// int ImagePipeline::getTemplateID(Boxes& boxes) {
+//     int template_id = -1;
+//     if(!isValid) {
+//         std::cout << "ERROR: INVALID IMAGE!" << std::endl;
+//     } else if(img.empty() || img.rows <= 0 || img.cols <= 0) {
+//         std::cout << "ERROR: VALID IMAGE, BUT STILL A PROBLEM EXISTS!" << std::endl;
+//         std::cout << "img.empty():" << img.empty() << std::endl;
+//         std::cout << "img.rows:" << img.rows << std::endl;
+//         std::cout << "img.cols:" << img.cols << std::endl;
+//     } else {
+//         // Initialize SURF detector
+//         cv::Ptr<cv::xfeatures2d::SURF> detector = cv::xfeatures2d::SURF::create(500);  // 500 is the Hessian threshold
+//         cv::Ptr<cv::xfeatures2d::SURF> extractor = cv::xfeatures2d::SURF::create();
+
+//         // Detect keypoints and descriptors in the current image
+//         std::vector<cv::KeyPoint> keypoints_img;
+//         cv::Mat descriptors_img;
+//         detector->detectAndCompute(img, cv::noArray(), keypoints_img, descriptors_img);
+
+//         // Iterate through the templates in boxes.templates (you will need to modify the 'Boxes' class to store template images)
+//         for (int i = 0; i < boxes.templates.size(); i++) {
+//             cv::Mat template_img = boxes.templates[i];
+
+//             // Detect keypoints and descriptors in the template image
+//             std::vector<cv::KeyPoint> keypoints_template;
+//             cv::Mat descriptors_template;
+//             detector->detectAndCompute(template_img, cv::noArray(), keypoints_template, descriptors_template);
+
+//             // Use FLANN to match the descriptors
+//             cv::FlannBasedMatcher matcher;
+//             std::vector<cv::DMatch> matches;
+//             matcher.match(descriptors_img, descriptors_template, matches);
+
+//             // Evaluate the matches (you can apply a distance threshold to filter out bad matches)
+//             double max_dist = 0;
+//             double min_dist = 100;
+
+//             for (int i = 0; i < descriptors_img.rows; i++) {
+//                 double dist = matches[i].distance;
+//                 if (dist < min_dist) min_dist = dist;
+//                 if (dist > max_dist) max_dist = dist;
+//             }
+
+//             std::cout << "-- Max dist : " << max_dist << " ; Min dist : " << min_dist << std::endl;
+
+//             // If a sufficient number of good matches are found, consider this template a match
+//             int good_matches = 0;
+//             for (int i = 0; i < matches.size(); i++) {
+//                 if (matches[i].distance <= std::max(2 * min_dist, 0.02)) {
+//                     good_matches++;
+//                 }
+//             }
+
+//             // If the good matches exceed a threshold, consider it as a valid match
+//             if (good_matches > 10) { // This threshold can be adjusted
+//                 template_id = i;
+//                 break;
+//             }
+//         }
+
+//         // Display the image with keypoints for visualization
+//         cv::Mat img_with_keypoints;
+//         cv::drawKeypoints(img, keypoints_img, img_with_keypoints);
+//         cv::imshow("SURF Keypoints", img_with_keypoints);
+//         //std::cout<<"Template id:" <<template_id <<std::endl;
+//         cv::waitKey(1);
+//     }  
+
+//     std::cout<<"Template id:" <<template_id <<std::endl;
+//     return template_id;
+// }
+
+/////////////////////////Test Code////////////////////////
+
 #include <opencv2/xfeatures2d.hpp>
 #include <opencv2/features2d.hpp>
 #include <opencv2/flann.hpp>
+#include <opencv2/calib3d.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/imgproc.hpp>
 
 #include <imagePipeline.h>
 
 #define IMAGE_TYPE sensor_msgs::image_encodings::BGR8
-#define IMAGE_TOPIC "camera/rgb/image_raw" // kinect:"camera/rgb/image_raw" webcam:"camera/image"
+#define IMAGE_TOPIC "camera/rgb/image_raw" // Kinect or webcam
 
 ImagePipeline::ImagePipeline(ros::NodeHandle& n) {
     image_transport::ImageTransport it(n);
@@ -147,86 +253,104 @@ ImagePipeline::ImagePipeline(ros::NodeHandle& n) {
 
 void ImagePipeline::imageCallback(const sensor_msgs::ImageConstPtr& msg) {
     try {
-        if(isValid) {
-            img.release();
-        }
+        if(isValid) img.release();
         img = (cv_bridge::toCvShare(msg, IMAGE_TYPE)->image).clone();
         isValid = true;
     } catch (cv_bridge::Exception& e) {
-        std::cout << "ERROR: Could not convert from " << msg->encoding.c_str()
-                  << " to " << IMAGE_TYPE.c_str() << "!" << std::endl;
+        std::cout << "ERROR: Could not convert image!" << std::endl;
         isValid = false;
     }    
 }
 
 int ImagePipeline::getTemplateID(Boxes& boxes) {
     int template_id = -1;
-    if(!isValid) {
-        std::cout << "ERROR: INVALID IMAGE!" << std::endl;
-    } else if(img.empty() || img.rows <= 0 || img.cols <= 0) {
-        std::cout << "ERROR: VALID IMAGE, BUT STILL A PROBLEM EXISTS!" << std::endl;
-        std::cout << "img.empty():" << img.empty() << std::endl;
-        std::cout << "img.rows:" << img.rows << std::endl;
-        std::cout << "img.cols:" << img.cols << std::endl;
-    } else {
-        // Initialize SURF detector
-        cv::Ptr<cv::xfeatures2d::SURF> detector = cv::xfeatures2d::SURF::create(500);  // 500 is the Hessian threshold
-        cv::Ptr<cv::xfeatures2d::SURF> extractor = cv::xfeatures2d::SURF::create();
+    if (!isValid || img.empty()) {
+        std::cout << "ERROR: Invalid image!" << std::endl;
+        return template_id;
+    }
 
-        // Detect keypoints and descriptors in the current image
-        std::vector<cv::KeyPoint> keypoints_img;
-        cv::Mat descriptors_img;
-        detector->detectAndCompute(img, cv::noArray(), keypoints_img, descriptors_img);
+    // Initialize SURF detector with Hessian threshold
+    int minHessian = 500;  // Adjust for better results
+    cv::Ptr<cv::xfeatures2d::SURF> detector = cv::xfeatures2d::SURF::create(minHessian);
 
-        // Iterate through the templates in boxes.templates (you will need to modify the 'Boxes' class to store template images)
-        for (int i = 0; i < boxes.templates.size(); i++) {
-            cv::Mat template_img = boxes.templates[i];
+    // Detect keypoints & descriptors in the input image
+    std::vector<cv::KeyPoint> keypoints_img;
+    cv::Mat descriptors_img;
+    detector->detectAndCompute(img, cv::noArray(), keypoints_img, descriptors_img);
 
-            // Detect keypoints and descriptors in the template image
-            std::vector<cv::KeyPoint> keypoints_template;
-            cv::Mat descriptors_template;
-            detector->detectAndCompute(template_img, cv::noArray(), keypoints_template, descriptors_template);
+    // BFMatcher (Brute-Force) instead of FLANN for small descriptor sets
+    cv::BFMatcher matcher(cv::NORM_L2, true);
 
-            // Use FLANN to match the descriptors
-            cv::FlannBasedMatcher matcher;
-            std::vector<cv::DMatch> matches;
-            matcher.match(descriptors_img, descriptors_template, matches);
+    for (int i = 0; i < boxes.templates.size(); i++) {
+        cv::Mat template_img = boxes.templates[i];
 
-            // Evaluate the matches (you can apply a distance threshold to filter out bad matches)
-            double max_dist = 0;
-            double min_dist = 100;
+        // Detect keypoints & descriptors in the template image
+        std::vector<cv::KeyPoint> keypoints_template;
+        cv::Mat descriptors_template;
+        detector->detectAndCompute(template_img, cv::noArray(), keypoints_template, descriptors_template);
 
-            for (int i = 0; i < descriptors_img.rows; i++) {
-                double dist = matches[i].distance;
-                if (dist < min_dist) min_dist = dist;
-                if (dist > max_dist) max_dist = dist;
-            }
+        if (descriptors_img.empty() || descriptors_template.empty()) continue;
 
-            std::cout << "-- Max dist : " << max_dist << " ; Min dist : " << min_dist << std::endl;
+        // Match descriptors
+        std::vector<cv::DMatch> matches;
+        matcher.match(descriptors_img, descriptors_template, matches);
 
-            // If a sufficient number of good matches are found, consider this template a match
-            int good_matches = 0;
-            for (int i = 0; i < matches.size(); i++) {
-                if (matches[i].distance <= std::max(2 * min_dist, 0.02)) {
-                    good_matches++;
-                }
-            }
+        // Find min & max distances between keypoints
+        double min_dist = 100, max_dist = 0;
+        for (size_t j = 0; j < matches.size(); j++) {
+            double dist = matches[j].distance;
+            if (dist < min_dist) min_dist = dist;
+            if (dist > max_dist) max_dist = dist;
+        }
 
-            // If the good matches exceed a threshold, consider it as a valid match
-            if (good_matches > 10) { // This threshold can be adjusted
-                template_id = i;
-                break;
+        // Apply Lowe’s ratio test for filtering good matches
+        std::vector<cv::DMatch> good_matches;
+        for (size_t j = 0; j < matches.size(); j++) {
+            if (matches[j].distance <= std::max(2 * min_dist, 0.02)) {
+                good_matches.push_back(matches[j]);
             }
         }
 
-        // Display the image with keypoints for visualization
-        cv::Mat img_with_keypoints;
-        cv::drawKeypoints(img, keypoints_img, img_with_keypoints);
-        cv::imshow("SURF Keypoints", img_with_keypoints);
-        //std::cout<<"Template id:" <<template_id <<std::endl;
-        cv::waitKey(1);
-    }  
+        // If enough good matches, assume a match
+        if (good_matches.size() > 10) {
+            template_id = i;
 
-    std::cout<<"Template id:" <<template_id <<std::endl;
+            // Draw matches (for debugging)
+            cv::Mat img_matches;
+            cv::drawMatches(img, keypoints_img, template_img, keypoints_template, good_matches, img_matches);
+            cv::imshow("Good Matches", img_matches);
+
+            // Find object bounding box in scene
+            std::vector<cv::Point2f> obj, scene;
+            for (size_t j = 0; j < good_matches.size(); j++) {
+                obj.push_back(keypoints_template[good_matches[j].queryIdx].pt);
+                scene.push_back(keypoints_img[good_matches[j].trainIdx].pt);
+            }
+
+            if (obj.size() >= 4) {  // Need at least 4 points for Homography
+                cv::Mat H = cv::findHomography(obj, scene, cv::RANSAC);
+                
+                std::vector<cv::Point2f> obj_corners = {
+                    {0, 0}, {template_img.cols, 0}, 
+                    {template_img.cols, template_img.rows}, {0, template_img.rows} 
+                };
+                std::vector<cv::Point2f> scene_corners(4);
+                cv::perspectiveTransform(obj_corners, scene_corners, H);
+
+                // Draw bounding box around detected object
+                cv::line(img, scene_corners[0], scene_corners[1], cv::Scalar(0, 255, 0), 4);
+                cv::line(img, scene_corners[1], scene_corners[2], cv::Scalar(0, 255, 0), 4);
+                cv::line(img, scene_corners[2], scene_corners[3], cv::Scalar(0, 255, 0), 4);
+                cv::line(img, scene_corners[3], scene_corners[0], cv::Scalar(0, 255, 0), 4);
+
+                cv::imshow("Detected Object", img);
+            }
+
+            cv::waitKey(1);
+            break; // Exit loop after first match
+        }
+    }
+
+    std::cout << "Template ID: " << template_id << std::endl;
     return template_id;
 }
