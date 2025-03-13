@@ -29,6 +29,10 @@ void ImagePipeline::imageCallback(const sensor_msgs::ImageConstPtr& msg) {
     }    
 }
 
+bool ImagePipeline::isImageValid() const {
+    return isValid;
+}
+
 int ImagePipeline::getTemplateID(Boxes& boxes) {
     int template_id = -1;
     if (!isValid || img.empty()) {
