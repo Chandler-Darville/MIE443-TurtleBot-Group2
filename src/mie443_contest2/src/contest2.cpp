@@ -6,6 +6,8 @@
 #include <termios.h>
 #include <unistd.h>
 #include <iostream>
+#include <vector>
+#include <algorithm>
 
 // Function to detect keyboard press without blocking
 char getKeyPress() {
@@ -47,6 +49,7 @@ int main(int argc, char** argv) {
     
     // Initialize image object and subscriber.
     ImagePipeline imagePipeline(n);
+    std::vector<int> recognizedTemplates;
 
     // Contest count down timer
     std::chrono::time_point<std::chrono::system_clock> start;
@@ -61,7 +64,37 @@ int main(int argc, char** argv) {
         char key = getKeyPress();
         if (key == 't') { // 't' is the key to trigger template matching
             std::cout << "Triggering template matching..." << std::endl;
-            imagePipeline.getTemplateID(boxes);
+
+            std::vector<int> templateIDs(3, -1);
+
+            for (int i = 0; i < 3; ++i) {
+                templateIDs[i] = imagePipeline.getTemplateID(boxes);
+            }
+
+            // Find the most common ID
+            std::sort(templateIDs.begin(), templateIDs.end());
+            int mostCommonID = templateIDs[0];
+            int maxCount = 1, currentCount = 1;
+
+            for (size_t i = 1; i < templateIDs.size(); ++i) {
+                if (templateIDs[i] == templateIDs[i - 1]) {
+                    currentCount++;
+                } else {
+                    currentCount = 1;
+                }
+                if (currentCount > maxCount) {
+                    maxCount = currentCount;
+                    mostCommonID = templateIDs[i];
+                }
+            }
+
+            recognizedTemplates.push_back(mostCommonID);
+            std::cout << "Most common template ID: " << mostCommonID << std::endl;
+            std::cout << "Recognized Templates Vector: [";
+            for (int id : recognizedTemplates) {
+                std::cout << id << " ";
+            }
+            std::cout << "]" << std::endl;
         }
         
         // Update elapsed time
