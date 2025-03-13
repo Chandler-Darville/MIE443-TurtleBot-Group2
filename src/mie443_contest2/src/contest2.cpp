@@ -51,6 +51,9 @@ int main(int argc, char** argv) {
     ImagePipeline imagePipeline(n);
     std::vector<int> recognizedTemplates;
 
+    // Trigger imagePipeline.getTemplateID(boxes); once at the start (not stored)
+    imagePipeline.getTemplateID(boxes);
+
     // Contest count down timer
     std::chrono::time_point<std::chrono::system_clock> start;
     start = std::chrono::system_clock::now();
@@ -65,9 +68,9 @@ int main(int argc, char** argv) {
         if (key == 't') { // 't' is the key to trigger template matching
             std::cout << "Triggering template matching..." << std::endl;
 
-            std::vector<int> templateIDs(3, -1);
+            std::vector<int> templateIDs(5, -1);
 
-            for (int i = 0; i < 3; ++i) {
+            for (int i = 0; i < 5; ++i) {
                 templateIDs[i] = imagePipeline.getTemplateID(boxes);
             }
 
