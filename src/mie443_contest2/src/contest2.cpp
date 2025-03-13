@@ -26,53 +26,42 @@ char getKeyPress() {
     return 0;
 }
 
-// Function to force image update
-void waitForNewImage(ImagePipeline& imagePipeline) {
-    imagePipeline.isValid = false;  // Reset the image validity flag
-    while (!imagePipeline.isValid && ros::ok()) {
-        ros::spinOnce();  // Wait for a new image to be received
-        ros::Duration(0.01).sleep();
-    }
-}
-
 int main(int argc, char** argv) {
     // Setup ROS.
     ros::init(argc, argv, "contest2");
     ros::NodeHandle n;
-    
+
     // Robot pose object + subscriber.
     RobotPose robotPose(0,0,0);
     ros::Subscriber amclSub = n.subscribe("/amcl_pose", 1, &RobotPose::poseCallback, &robotPose);
 
     // Initialize box coordinates and templates
-    Boxes boxes; 
+    Boxes boxes;
     if(!boxes.load_coords() || !boxes.load_templates()) {
         std::cout << "ERROR: could not load coords or templates" << std::endl;
         return -1;
     }
-    for(int i = 0; i < boxes.coords.size(); ++i) {
-        std::cout << "Box coordinates: " << std::endl;
-        std::cout << i << " x: " << boxes.coords[i][0] << " y: " << boxes.coords[i][1] << " z: " 
-                  << boxes.coords[i][2] << std::endl;
-    }
-    
+
     // Initialize image object and subscriber.
     ImagePipeline imagePipeline(n);
     std::vector<int> recognizedTemplates;
 
     // Trigger imagePipeline.getTemplateID(boxes); once at the start (not stored)
-    waitForNewImage(imagePipeline);  // Ensure a fresh image is received
+    while (!imagePipeline.isImageValid() && ros::ok()) {
+        ros::spinOnce();
+        ros::Duration(0.01).sleep();
+    }
     imagePipeline.getTemplateID(boxes);
+    imagePipeline.resetImageValidity();
 
     // Contest count down timer
-    std::chrono::time_point<std::chrono::system_clock> start;
-    start = std::chrono::system_clock::now();
+    auto start = std::chrono::system_clock::now();
     uint64_t secondsElapsed = 0;
 
     // Execute strategy.
     while(ros::ok() && secondsElapsed <= 300) {
         ros::spinOnce();
-        
+
         // Check for keyboard input
         char key = getKeyPress();
         if (key == 't') { // 't' is the key to trigger template matching
@@ -81,8 +70,12 @@ int main(int argc, char** argv) {
             std::vector<int> templateIDs(5, -1);
 
             for (int i = 0; i < 5; ++i) {
-                waitForNewImage(imagePipeline);  // Make sure a new image is captured before each match
+                while (!imagePipeline.isImageValid() && ros::ok()) {
+                    ros::spinOnce();
+                    ros::Duration(0.01).sleep();
+                }
                 templateIDs[i] = imagePipeline.getTemplateID(boxes);
+                imagePipeline.resetImageValidity();
             }
 
             // Find the most common ID
@@ -110,11 +103,11 @@ int main(int argc, char** argv) {
             }
             std::cout << "]" << std::endl;
         }
-        
+
         // Update elapsed time
         auto now = std::chrono::system_clock::now();
         secondsElapsed = std::chrono::duration_cast<std::chrono::seconds>(now - start).count();
-        
+
         ros::Duration(0.01).sleep();
     }
     return 0;
