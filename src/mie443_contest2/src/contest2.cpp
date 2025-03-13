@@ -26,6 +26,15 @@ char getKeyPress() {
     return 0;
 }
 
+// Function to force image update
+void waitForNewImage(ImagePipeline& imagePipeline) {
+    imagePipeline.isValid = false;  // Reset the image validity flag
+    while (!imagePipeline.isValid && ros::ok()) {
+        ros::spinOnce();  // Wait for a new image to be received
+        ros::Duration(0.01).sleep();
+    }
+}
+
 int main(int argc, char** argv) {
     // Setup ROS.
     ros::init(argc, argv, "contest2");
@@ -52,6 +61,7 @@ int main(int argc, char** argv) {
     std::vector<int> recognizedTemplates;
 
     // Trigger imagePipeline.getTemplateID(boxes); once at the start (not stored)
+    waitForNewImage(imagePipeline);  // Ensure a fresh image is received
     imagePipeline.getTemplateID(boxes);
 
     // Contest count down timer
@@ -62,24 +72,17 @@ int main(int argc, char** argv) {
     // Execute strategy.
     while(ros::ok() && secondsElapsed <= 300) {
         ros::spinOnce();
-
+        
         // Check for keyboard input
         char key = getKeyPress();
         if (key == 't') { // 't' is the key to trigger template matching
             std::cout << "Triggering template matching..." << std::endl;
 
-            // Wait until a valid image is received
-            while (!imagePipeline.isValid()) {
-                ros::spinOnce();
-                ros::Duration(0.01).sleep();
-            }
-
             std::vector<int> templateIDs(5, -1);
 
             for (int i = 0; i < 5; ++i) {
+                waitForNewImage(imagePipeline);  // Make sure a new image is captured before each match
                 templateIDs[i] = imagePipeline.getTemplateID(boxes);
-                ros::spinOnce();  // Ensure the image updates
-                ros::Duration(0.1).sleep(); // Give time for image refresh
             }
 
             // Find the most common ID
