@@ -62,16 +62,24 @@ int main(int argc, char** argv) {
     // Execute strategy.
     while(ros::ok() && secondsElapsed <= 300) {
         ros::spinOnce();
-        
+
         // Check for keyboard input
         char key = getKeyPress();
         if (key == 't') { // 't' is the key to trigger template matching
             std::cout << "Triggering template matching..." << std::endl;
 
+            // Wait until a valid image is received
+            while (!imagePipeline.isValid) {
+                ros::spinOnce();
+                ros::Duration(0.01).sleep();
+            }
+
             std::vector<int> templateIDs(5, -1);
 
             for (int i = 0; i < 5; ++i) {
                 templateIDs[i] = imagePipeline.getTemplateID(boxes);
+                ros::spinOnce();  // Ensure the image updates
+                ros::Duration(0.1).sleep(); // Give time for image refresh
             }
 
             // Find the most common ID
