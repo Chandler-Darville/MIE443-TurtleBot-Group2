@@ -239,11 +239,13 @@
 #include <opencv2/calib3d.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
+#include <opencv2/core.hpp>
 
 #include <imagePipeline.h>
+#include <thread>
 
 #define IMAGE_TYPE sensor_msgs::image_encodings::BGR8
-#define IMAGE_TOPIC "camera/rgb/image_raw" // Kinect or webcam
+#define IMAGE_TOPIC "camera/rgb/image_raw"
 
 ImagePipeline::ImagePipeline(ros::NodeHandle& n) {
     image_transport::ImageTransport it(n);
@@ -269,97 +271,75 @@ int ImagePipeline::getTemplateID(Boxes& boxes) {
         return template_id;
     }
 
-    // Initialize SURF detector with Hessian threshold
     int minHessian = 500;  
     cv::Ptr<cv::xfeatures2d::SURF> detector = cv::xfeatures2d::SURF::create(minHessian);
 
-    // Detect keypoints & descriptors in the input image
     std::vector<cv::KeyPoint> keypoints_img;
     cv::Mat descriptors_img;
     detector->detectAndCompute(img, cv::noArray(), keypoints_img, descriptors_img);
 
-    // Print number of keypoints in the input image
     std::cout << "Captured Image Keypoints: " << keypoints_img.size() << std::endl;
 
-    // BFMatcher (Brute-Force) for descriptor matching
-    cv::BFMatcher matcher(cv::NORM_L2, true);
+    if (descriptors_img.empty()) {
+        std::cout << "ERROR: No descriptors found in captured image!" << std::endl;
+        return template_id;
+    }
+
+    cv::FlannBasedMatcher matcher(new cv::flann::KDTreeIndexParams(), new cv::flann::SearchParams());
 
     for (int i = 0; i < boxes.templates.size(); i++) {
         cv::Mat template_img = boxes.templates[i];
 
-        // Detect keypoints & descriptors in the template image
         std::vector<cv::KeyPoint> keypoints_template;
         cv::Mat descriptors_template;
         detector->detectAndCompute(template_img, cv::noArray(), keypoints_template, descriptors_template);
 
-        // Print number of keypoints in the template image
-        std::cout << "Template " << i << " Keypoints: " << keypoints_template.size() << std::endl;
-
-        if (descriptors_img.empty() || descriptors_template.empty()) {
+        if (descriptors_template.empty()) {
             std::cout << "Skipping template " << i << " due to empty descriptors!" << std::endl;
             continue;
         }
 
-        // Match descriptors
-        std::vector<cv::DMatch> matches;
-        matcher.match(descriptors_img, descriptors_template, matches);
-        std::cout << "Template " << i << " - Total Matches: " << matches.size() << std::endl;
+        std::vector<std::vector<cv::DMatch>> knn_matches;
+        matcher.knnMatch(descriptors_img, descriptors_template, knn_matches, 2);
 
-        // Find min distance between keypoints
-        double min_dist = 100, max_dist = 0;
-        for (const auto& match : matches) {
-            double dist = match.distance;
-            if (dist < min_dist) min_dist = dist;
-            if (dist > max_dist) max_dist = dist;
-        }
-
-        // Apply Lowe’s ratio test for filtering good matches
         std::vector<cv::DMatch> good_matches;
-        for (const auto& match : matches) {
-            if (match.distance <= std::max(2 * min_dist, 0.02)) {
-                good_matches.push_back(match);
+        for (const auto& match : knn_matches) {
+            if (match[0].distance < 0.75f * match[1].distance) {
+                good_matches.push_back(match[0]);
             }
         }
 
         std::cout << "Template " << i << " - Good Matches: " << good_matches.size() << std::endl;
 
-        // If enough good matches exist, process further
         if (good_matches.size() > 10) {
             template_id = i;
             std::cout << "Template " << i << " is a possible match!" << std::endl;
 
-            // Draw matches for debugging
-            cv::Mat img_matches;
-            cv::drawMatches(img, keypoints_img, template_img, keypoints_template, good_matches, img_matches);
-            cv::imshow("Good Matches", img_matches);
-
-            // Find object bounding box in scene
             std::vector<cv::Point2f> obj, scene;
             for (const auto& match : good_matches) {
-                obj.push_back(keypoints_template[match.queryIdx].pt);
-                scene.push_back(keypoints_img[match.trainIdx].pt);
+                obj.push_back(keypoints_template[match.trainIdx].pt);
+                scene.push_back(keypoints_img[match.queryIdx].pt);
             }
 
             if (obj.size() >= 4) {
                 cv::Mat H = cv::findHomography(obj, scene, cv::RANSAC);
-                std::vector<cv::Point2f> obj_corners = {
-                    {0, 0}, {template_img.cols, 0}, 
-                    {template_img.cols, template_img.rows}, {0, template_img.rows} 
-                };
-                std::vector<cv::Point2f> scene_corners(4);
-                cv::perspectiveTransform(obj_corners, scene_corners, H);
+                if (!H.empty()) {
+                    std::vector<cv::Point2f> obj_corners = { {0,0}, {template_img.cols,0}, 
+                                                            {template_img.cols,template_img.rows}, {0,template_img.rows} };
+                    std::vector<cv::Point2f> scene_corners(4);
+                    cv::perspectiveTransform(obj_corners, scene_corners, H);
 
-                // Draw bounding box around detected object
-                cv::line(img, scene_corners[0], scene_corners[1], cv::Scalar(0, 255, 0), 4);
-                cv::line(img, scene_corners[1], scene_corners[2], cv::Scalar(0, 255, 0), 4);
-                cv::line(img, scene_corners[2], scene_corners[3], cv::Scalar(0, 255, 0), 4);
-                cv::line(img, scene_corners[3], scene_corners[0], cv::Scalar(0, 255, 0), 4);
+                    cv::line(img, scene_corners[0], scene_corners[1], cv::Scalar(0, 255, 0), 4);
+                    cv::line(img, scene_corners[1], scene_corners[2], cv::Scalar(0, 255, 0), 4);
+                    cv::line(img, scene_corners[2], scene_corners[3], cv::Scalar(0, 255, 0), 4);
+                    cv::line(img, scene_corners[3], scene_corners[0], cv::Scalar(0, 255, 0), 4);
 
-                cv::imshow("Detected Object", img);
+                    cv::imshow("Detected Object", img);
+                }
             }
 
             cv::waitKey(1);
-            break; // Exit loop after first match
+            break;
         }
     }
 
