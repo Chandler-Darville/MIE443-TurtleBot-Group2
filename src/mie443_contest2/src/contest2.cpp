@@ -1,17 +1,38 @@
-
 #include <boxes.h>
 #include <navigation.h>
 #include <robot_pose.h>
 #include <imagePipeline.h>
 #include <chrono>
+#include <termios.h>
+#include <unistd.h>
+#include <iostream>
+
+// Function to detect keyboard press without blocking
+char getKeyPress() {
+    struct termios oldt, newt;
+    char ch;
+    tcgetattr(STDIN_FILENO, &oldt);
+    newt = oldt;
+    newt.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+    int nread = read(STDIN_FILENO, &ch, 1);
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+
+    if (nread == 1) {
+        return ch;
+    }
+    return 0;
+}
 
 int main(int argc, char** argv) {
     // Setup ROS.
     ros::init(argc, argv, "contest2");
     ros::NodeHandle n;
+    
     // Robot pose object + subscriber.
     RobotPose robotPose(0,0,0);
     ros::Subscriber amclSub = n.subscribe("/amcl_pose", 1, &RobotPose::poseCallback, &robotPose);
+
     // Initialize box coordinates and templates
     Boxes boxes; 
     if(!boxes.load_coords() || !boxes.load_templates()) {
@@ -23,21 +44,30 @@ int main(int argc, char** argv) {
         std::cout << i << " x: " << boxes.coords[i][0] << " y: " << boxes.coords[i][1] << " z: " 
                   << boxes.coords[i][2] << std::endl;
     }
-    // Initialize image objectand subscriber.
+    
+    // Initialize image object and subscriber.
     ImagePipeline imagePipeline(n);
 
-    // contest count down timer
+    // Contest count down timer
     std::chrono::time_point<std::chrono::system_clock> start;
     start = std::chrono::system_clock::now();
     uint64_t secondsElapsed = 0;
-    
+
     // Execute strategy.
     while(ros::ok() && secondsElapsed <= 300) {
         ros::spinOnce();
-        /***YOUR CODE HERE***/
-        // Use: boxes.coords
-        // Use: robotPose.x, robotPose.y, robotPose.phi
-        imagePipeline.getTemplateID(boxes);
+        
+        // Check for keyboard input
+        char key = getKeyPress();
+        if (key == 't') { // 't' is the key to trigger template matching
+            std::cout << "Triggering template matching..." << std::endl;
+            imagePipeline.getTemplateID(boxes);
+        }
+        
+        // Update elapsed time
+        auto now = std::chrono::system_clock::now();
+        secondsElapsed = std::chrono::duration_cast<std::chrono::seconds>(now - start).count();
+        
         ros::Duration(0.01).sleep();
     }
     return 0;
