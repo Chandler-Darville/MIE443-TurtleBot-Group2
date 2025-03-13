@@ -53,6 +53,16 @@ imagePipeline.h
 -
 chrono
 -
+termios.h
+-
+unistd.h
+-
+iostream
+-
+vector
+-
+algorithm
+-
 
 /home/thursday2023/catkin_ws/src/mie443_contest2/src/imagePipeline.cpp
 opencv2/xfeatures2d.hpp
