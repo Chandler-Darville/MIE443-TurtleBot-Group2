@@ -74,11 +74,11 @@ int ImagePipeline::getTemplateID(Boxes& boxes) {
             }
         }
 
-        std::cout << "Template " << i << " - Good Matches: " << good_matches.size() << std::endl;
+        //std::cout << "Template " << i << " - Good Matches: " << good_matches.size() << std::endl;
 
         if (good_matches.size() > 10) {
             template_id = i;
-            std::cout << "Template " << i << " is a possible match!" << std::endl;
+            //std::cout << "Template " << i << " is a possible match!" << std::endl;
 
             std::vector<cv::Point2f> obj, scene;
             for (const auto& match : good_matches) {
