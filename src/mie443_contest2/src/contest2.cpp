@@ -3,6 +3,18 @@
 #include <robot_pose.h>
 #include <imagePipeline.h>
 #include <chrono>
+#include <tf/transform_datatypes.h>
+#include <nav_msgs/Odometry.h>
+
+
+float odomX = 0.0, odomY = 0.0, odomYaw = 0.0;
+
+void odomCallback(const nav_msgs::Odometry::ConstPtr& msg){
+    odomX = msg->pose.pose.position.x;
+    odomY = msg->pose.pose.position.y;
+    odomYaw = tf::getYaw(msg->pose.pose.orientation);
+    ROS_INFO("Position: (%f, %f) Orientation: %f rad", odomX, odomY, odomYaw);
+}
 
 int main(int argc, char** argv) {
     // Setup ROS.
@@ -11,6 +23,11 @@ int main(int argc, char** argv) {
     // Robot pose object + subscriber.
     RobotPose robotPose(0,0,0);
     ros::Subscriber amclSub = n.subscribe("/amcl_pose", 1, &RobotPose::poseCallback, &robotPose);
+
+    // Odometry subscriber
+    ros::Subscriber odom = n.subscribe("odom", 1, &odomCallback);
+
+
     // Initialize box coordinates and templates
     Boxes boxes; 
     if(!boxes.load_coords() || !boxes.load_templates()) {
@@ -34,6 +51,7 @@ int main(int argc, char** argv) {
     while(ros::ok() && secondsElapsed <= 300) {
         ros::spinOnce();
         /***YOUR CODE HERE***/
+        ROS_INFO("Odom: (%f, %f, %f)", odomX, odomY, odomYaw);
         // Use: boxes.coords
         // Use: robotPose.x, robotPose.y, robotPose.phi
         imagePipeline.getTemplateID(boxes);
