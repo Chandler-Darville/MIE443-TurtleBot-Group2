@@ -69,7 +69,7 @@ int main(int argc, char** argv) {
             std::cout << "Triggering template matching..." << std::endl;
 
             // Wait until a valid image is received
-            while (!imagePipeline.isValid) {
+            while (!imagePipeline.isValid()) {
                 ros::spinOnce();
                 ros::Duration(0.01).sleep();
             }
