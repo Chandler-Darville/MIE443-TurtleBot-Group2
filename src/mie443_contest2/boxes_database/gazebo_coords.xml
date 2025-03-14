@@ -3,30 +3,30 @@
 	<coordinate1>
 	-1.429 <!--x  -->
 	1.797  <!--y  -->
-	-0.606 <!--phi-->
+	-34.72 <!--phi-->
 	</coordinate1>
 
 	<coordinate2>
 	-0.116
 	0.995
-	-0.009
+	-0.516
 	</coordinate2>
 
 	<coordinate3>
 	-0.108
 	-0.405
-	-1.569
+	-89.897
 	</coordinate3>
 
 	<coordinate4>
 	2.070
 	-1.250
-	0.791
+	45.321
 	</coordinate4>
 
 	<coordinate5>
 	1.889
 	2.043
-	-1.575
+	-90.241
 	</coordinate5>
 </opencv_storage>

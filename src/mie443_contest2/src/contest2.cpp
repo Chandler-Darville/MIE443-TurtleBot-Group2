@@ -108,47 +108,49 @@ int main(int argc, char** argv) {
                 Navigation::moveToGoal(xGoal, yGoal, yawGoal);
                 ros::Duration(1).sleep();
 
-                //-------------calling image detection------------
+
+                imagePipeline.getTemplateID(boxes);
+                // //-------------calling image detection------------
                 // for (int g=0; g<2; ++g)
                 // {
-                    std:: vector<int> templateIDs(5,-1);
-                    for (int i=0; i<5; ++i)
-                    {
-                        templateIDs[i]=imagePipeline.getTemplateID(boxes);
-                    }
+                //     std:: vector<int> templateIDs(5,-1);
+                //     for (int i=0; i<5; ++i)
+                //     {
+                //         templateIDs[i]=imagePipeline.getTemplateID(boxes);
+                //     }
 
-                    //find the most common ids
-                    std::sort(templateIDs.begin(),templateIDs.end());
-                    int mostCommonID=templateIDs[0];
-                    int maxCount=1,currentCount=1;
+                //     //find the most common ids
+                //     std::sort(templateIDs.begin(),templateIDs.end());
+                //     int mostCommonID=templateIDs[0];
+                //     int maxCount=1,currentCount=1;
 
-                    for (size_t i=1; i<templateIDs.size();++i)
-                    {
-                        if (templateIDs[i]==templateIDs[i -1])
-                        {
-                            currentCount++;
-                        }
-                        else
-                        {
-                            currentCount=1;
-                        }
-                        if(currentCount>maxCount)
-                        {
-                            maxCount=currentCount;
-                            mostCommonID=templateIDs[i];
-                        }
-                    }
+                //     for (int i=1; i<templateIDs.size();++i)
+                //     {
+                //         if (templateIDs[i]==templateIDs[i -1])
+                //         {
+                //             currentCount++;
+                //         }
+                //         else
+                //         {
+                //             currentCount=1;
+                //         }
+                //         if(currentCount>maxCount)
+                //         {
+                //             maxCount=currentCount;
+                //             mostCommonID=templateIDs[i];
+                //         }
+                //     }
 
-                    recognizedTemplates.push_back(mostCommonID);
-                    std::cout<<"Most common template ID: " << mostCommonID<<std::endl;
-                    std::cout<<"Templates Vector: [";
-                    for (int id:recognizedTemplates)
-                    {
-                        std::cout<<id<<"";
-                    }
-                    std::cout<<"]"<<std::endl;
+                //     recognizedTemplates.push_back(mostCommonID);
+                //     std::cout<<"Most common template ID: " << mostCommonID<<std::endl;
+                //     std::cout<<"Templates Vector: [";
+                //     for (int id:recognizedTemplates)
+                //     {
+                //         std::cout<<id<<"";
+                //     }
+                //     std::cout<<"]"<<std::endl;
                 // }
-                //------------------------------------------------
+                // //------------------------------------------------
             }
             Navigation::moveToGoal(originX,originY, originYaw);
             break;
