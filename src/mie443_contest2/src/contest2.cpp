@@ -51,8 +51,8 @@ int main(int argc, char** argv) {
     ImagePipeline imagePipeline(n);
     std::vector<int> recognizedTemplates;
 
-    // Trigger imagePipeline.getTemplateID(boxes); once at the start (not stored)
-    imagePipeline.getTemplateID(boxes);
+    // // Trigger imagePipeline.getTemplateID(boxes); once at the start (not stored)
+    // imagePipeline.getTemplateID(boxes);
 
     // Contest count down timer
     std::chrono::time_point<std::chrono::system_clock> start;
@@ -63,47 +63,51 @@ int main(int argc, char** argv) {
     while(ros::ok() && secondsElapsed <= 300) {
         ros::spinOnce();
         
-        // Check for keyboard input
-        char key = getKeyPress();
-        if (key == 't') { // 't' is the key to trigger template matching
-            std::cout << "Triggering template matching..." << std::endl;
+    //     // Check for keyboard input
+    //     char key = getKeyPress();
+    //     if (key == 't') { // 't' is the key to trigger template matching
+    //         std::cout << "Triggering template matching..." << std::endl;
 
-            std::vector<int> templateIDs(5, -1);
+    //         std::vector<int> templateIDs(5, -1);
 
-            for (int i = 0; i < 5; ++i) {
-                templateIDs[i] = imagePipeline.getTemplateID(boxes);
-            }
+    //         for (int i = 0; i < 5; ++i) {
+    //             templateIDs[i] = imagePipeline.getTemplateID(boxes);
+    //         }
 
-            // Find the most common ID
-            std::sort(templateIDs.begin(), templateIDs.end());
-            int mostCommonID = templateIDs[0];
-            int maxCount = 1, currentCount = 1;
+    //         // Find the most common ID
+    //         std::sort(templateIDs.begin(), templateIDs.end());
+    //         int mostCommonID = templateIDs[0];
+    //         int maxCount = 1, currentCount = 1;
 
-            for (size_t i = 1; i < templateIDs.size(); ++i) {
-                if (templateIDs[i] == templateIDs[i - 1]) {
-                    currentCount++;
-                } else {
-                    currentCount = 1;
-                }
-                if (currentCount > maxCount) {
-                    maxCount = currentCount;
-                    mostCommonID = templateIDs[i];
-                }
-            }
+    //         for (size_t i = 1; i < templateIDs.size(); ++i) {
+    //             if (templateIDs[i] == templateIDs[i - 1]) {
+    //                 currentCount++;
+    //             } else {
+    //                 currentCount = 1;
+    //             }
+    //             if (currentCount > maxCount) {
+    //                 maxCount = currentCount;
+    //                 mostCommonID = templateIDs[i];
+    //             }
+    //         }
 
-            recognizedTemplates.push_back(mostCommonID);
-            std::cout << "Most common template ID: " << mostCommonID << std::endl;
-            std::cout << "Recognized Templates Vector: [";
-            for (int id : recognizedTemplates) {
-                std::cout << id << " ";
-            }
-            std::cout << "]" << std::endl;
-        }
+    //         recognizedTemplates.push_back(mostCommonID);
+    //         std::cout << "Most common template ID: " << mostCommonID << std::endl;
+    //         std::cout << "Recognized Templates Vector: [";
+    //         for (int id : recognizedTemplates) {
+    //             std::cout << id << " ";
+    //         }
+    //         std::cout << "]" << std::endl;
+    //     }
         
-        // Update elapsed time
-        auto now = std::chrono::system_clock::now();
-        secondsElapsed = std::chrono::duration_cast<std::chrono::seconds>(now - start).count();
-        
+    //     // Update elapsed time
+    //     auto now = std::chrono::system_clock::now();
+    //     secondsElapsed = std::chrono::duration_cast<std::chrono::seconds>(now - start).count();
+   
+        // string template = ["", ""];
+        int templateID = imagePipeline.getTemplateID(boxes);
+
+        std::cout << "from contest 2 Final Template ID: " << templateID << std::endl;
         ros::Duration(0.01).sleep();
     }
     return 0;
