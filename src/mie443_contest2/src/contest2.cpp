@@ -109,7 +109,10 @@ int main(int argc, char** argv) {
                 ros::Duration(1).sleep();
 
 
-                imagePipeline.getTemplateID(boxes);
+                int templateID = imagePipeline.getTemplateID(boxes);
+
+                std::cout << "c2 Final Template ID: " << templateID << std::endl;
+                ros::Duration(0.01).sleep();
                 // //-------------calling image detection------------
                 // for (int g=0; g<2; ++g)
                 // {
@@ -156,9 +159,10 @@ int main(int argc, char** argv) {
             break;
         }
 
-        
-        //imagePipeline.getTemplateID(boxes);
-        ros::Duration(0.01).sleep();
+        // int templateID = imagePipeline.getTemplateID(boxes);
+
+        // std::cout<<"from contest 2 final template ID:" << templateID << std :: endl;
+        // ros::Duration(0.01).sleep();
     }
     return 0;
 }
