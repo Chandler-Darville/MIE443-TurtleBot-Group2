@@ -26,6 +26,12 @@ void odomCallback(const nav_msgs::Odometry::ConstPtr& msg){
     //ROS_INFO("Position: (%f, %f) Orientation: %f rad", odomX, odomY, odomYaw);
 }
 
+int tagIDs[5];
+float xCoords[5];
+float yCoords[5];
+float yawCoords[5];
+std::string tagNames[5];
+int tag_idx = 0;
 
 // Function to write tag information to a file
 void writeTagInfoToFile(int tagID, float x, float y, float yaw, const std::string& tagName) {
@@ -136,9 +142,15 @@ int main(int argc, char** argv) {
                 ros::Duration(0.01).sleep();
 
                  // Write tag information to file
-                 if (templateID >= 0) { // Assuming -1 is an invalid ID
+                 if (templateID >= -1) {
+                    tagIDs[tag_idx] = templateID;
+                    xCoords[tag_idx] = xGoal;
+                    yCoords[tag_idx] = yGoal;
+                    yawCoords[tag_idx] = yawGoal;
                     std::string tagName = "Tag_" + std::to_string(templateID); // Modify as needed
-                    writeTagInfoToFile(templateID, xGoal, yGoal, yawGoal, tagName);
+                    tagNames[tag_idx] = tagName;
+                    tag_idx++;
+                    //writeTagInfoToFile(templateID, xGoal, yGoal, yawGoal, tagName);
                 }
 
                 // //-------------calling image detection------------
@@ -184,6 +196,12 @@ int main(int argc, char** argv) {
                 // //------------------------------------------------
             }
             Navigation::moveToGoal(originX,originY, originYaw);
+
+            for (int i=0; i<5; i++) {
+                writeTagInfoToFile(tagIDs[i], xCoords[i], yCoords[i], yawCoords[i], tagNames[i]);
+            }
+
+
             break;
         }
 
