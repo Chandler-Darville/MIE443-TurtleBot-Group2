@@ -12,6 +12,7 @@
 #include <math.h>
 
 #include <fstream> //for file operation
+#include <cstdlib> // For system() to display the file
 
 #define RAD2DEG(rad)(rad*180./M_PI)
 #define DEG2RAD(deg)(deg*M_PI/180.)
@@ -26,18 +27,43 @@ void odomCallback(const nav_msgs::Odometry::ConstPtr& msg){
     //ROS_INFO("Position: (%f, %f) Orientation: %f rad", odomX, odomY, odomYaw);
 }
 
-int tagIDs[5];
-float xCoords[5];
-float yCoords[5];
-float yawCoords[5];
-std::string tagNames[5];
-int tag_idx = 0;
+// int tagIDs[5];
+// float xCoords[5];
+// float yCoords[5];
+// float yawCoords[5];
+// std::string tagNames[5];
+// int tag_idx = 0;
+
+// // Function to write tag information to a file
+// void writeTagInfoToFile(int tagID, float x, float y, float yaw, const std::string& tagName) {
+//     std::ofstream outFile("tag_info.txt", std::ios::app); // Open file in append mode
+//     if (outFile.is_open()) {
+//         outFile << "Tag ID: " << tagID << ", Position: (" << x << ", " << y << "), Yaw: " << yaw << ", Name: " << tagName << std::endl;
+//         outFile.close();
+//     } else {
+//         ROS_ERROR("Unable to open file for writing tag information.");
+//     }
+// }
+
+// Structure to store tag information
+struct TagInfo {
+    int tagID;
+    float x, y, yaw;
+    std::string tagName;
+};
 
 // Function to write tag information to a file
-void writeTagInfoToFile(int tagID, float x, float y, float yaw, const std::string& tagName) {
-    std::ofstream outFile("tag_info.txt", std::ios::app); // Open file in append mode
+void writeTagInfoToFile(const std::vector<TagInfo>& tagInfoList, const std::string& filename) {
+    std::ofstream outFile(filename);
     if (outFile.is_open()) {
-        outFile << "Tag ID: " << tagID << ", Position: (" << x << ", " << y << "), Yaw: " << yaw << ", Name: " << tagName << std::endl;
+        for (const auto& tagInfo : tagInfoList) {
+            if (tagInfo.tagID == -1) {
+                outFile << "Template ID: -1 (Empty Image or No Match)" << std::endl;
+            } else {
+                outFile << "Tag ID: " << tagInfo.tagID << ", Position: (" << tagInfo.x << ", " << tagInfo.y 
+                        << "), Yaw: " << tagInfo.yaw << ", Name: " << tagInfo.tagName << std::endl;
+            }
+        }
         outFile.close();
     } else {
         ROS_ERROR("Unable to open file for writing tag information.");
@@ -141,74 +167,58 @@ int main(int argc, char** argv) {
                 std::cout << "c2 Final Template ID: " << templateID << std::endl;
                 ros::Duration(0.01).sleep();
 
-                 // Write tag information to file
-                 if (templateID >= -1) {
-                    tagIDs[tag_idx] = templateID;
-                    xCoords[tag_idx] = xGoal;
-                    yCoords[tag_idx] = yGoal;
-                    yawCoords[tag_idx] = yawGoal;
-                    std::string tagName = "Tag_" + std::to_string(templateID); // Modify as needed
-                    tagNames[tag_idx] = tagName;
-                    tag_idx++;
-                    //writeTagInfoToFile(templateID, xGoal, yGoal, yawGoal, tagName);
-                }
+                //////////////////////////////////////////
+                std::string tagName = (templateID == -1) ? "No Match" : "Tag_" + std::to_string(templateID);
 
-                // //-------------calling image detection------------
-                // for (int g=0; g<2; ++g)
-                // {
-                //     std:: vector<int> templateIDs(5,-1);
-                //     for (int i=0; i<5; ++i)
-                //     {
-                //         templateIDs[i]=imagePipeline.getTemplateID(boxes);
-                //     }
+                // Store tag information
+                TagInfo tagInfo;
+                tagInfo.tagID = templateID;
+                tagInfo.x = xGoal;
+                tagInfo.y = yGoal;
+                tagInfo.yaw = yawGoal;
+                tagInfo.tagName = tagName;
+                tagInfoList.push_back(tagInfo);
+        
+                std::cout << "c2 Final Template ID: " << templateID << std::endl;
+                ros::Duration(0.01).sleep();
+            }
+        
+            // Write tag information to file
+            std::string filename = "tag_info.txt";
+            writeTagInfoToFile(tagInfoList, filename);
+        
+            // Display the file at program exit
+            std::cout << "Displaying tag information from file:" << std::endl;
+        #ifdef _WIN32
+            system("type tag_info.txt"); // For Windows
+        #else
+            system("cat tag_info.txt"); // For Linux/Mac
+        #endif                
 
-                //     //find the most common ids
-                //     std::sort(templateIDs.begin(),templateIDs.end());
-                //     int mostCommonID=templateIDs[0];
-                //     int maxCount=1,currentCount=1;
-
-                //     for (int i=1; i<templateIDs.size();++i)
-                //     {
-                //         if (templateIDs[i]==templateIDs[i -1])
-                //         {
-                //             currentCount++;
-                //         }
-                //         else
-                //         {
-                //             currentCount=1;
-                //         }
-                //         if(currentCount>maxCount)
-                //         {
-                //             maxCount=currentCount;
-                //             mostCommonID=templateIDs[i];
-                //         }
-                //     }
-
-                //     recognizedTemplates.push_back(mostCommonID);
-                //     std::cout<<"Most common template ID: " << mostCommonID<<std::endl;
-                //     std::cout<<"Templates Vector: [";
-                //     for (int id:recognizedTemplates)
-                //     {
-                //         std::cout<<id<<"";
-                //     }
-                //     std::cout<<"]"<<std::endl;
+                //  // Write tag information to file
+                //  if (templateID >= -1) {
+                //     tagIDs[tag_idx] = templateID;
+                //     xCoords[tag_idx] = xGoal;
+                //     yCoords[tag_idx] = yGoal;
+                //     yawCoords[tag_idx] = yawGoal;
+                //     std::string tagName = "Tag_" + std::to_string(templateID); // Modify as needed
+                //     tagNames[tag_idx] = tagName;
+                //     tag_idx++;
+                //     //writeTagInfoToFile(templateID, xGoal, yGoal, yawGoal, tagName);
                 // }
-                // //------------------------------------------------
+
+               
             }
             Navigation::moveToGoal(originX,originY, originYaw);
 
-            for (int i=0; i<5; i++) {
-                writeTagInfoToFile(tagIDs[i], xCoords[i], yCoords[i], yawCoords[i], tagNames[i]);
-            }
+            // for (int i=0; i<5; i++) {
+            //     writeTagInfoToFile(tagIDs[i], xCoords[i], yCoords[i], yawCoords[i], tagNames[i]);
+            // }
 
 
             break;
         }
 
-        // int templateID = imagePipeline.getTemplateID(boxes);
-
-        // std::cout<<"from contest 2 final template ID:" << templateID << std :: endl;
-        // ros::Duration(0.01).sleep();
     }
     return 0;
 }
