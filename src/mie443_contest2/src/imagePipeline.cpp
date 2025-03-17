@@ -79,7 +79,10 @@ int ImagePipeline::getTemplateID(Boxes& boxes) {
 
         if (good_matches.size() > maxmatch) {
             maxmatch = good_matches.size();
-            template_id = i;
+            if (maxmatch>20)
+            {
+                template_id = i;
+            }
 
             std::vector<cv::Point2f> obj, scene;
             for (const auto& match : good_matches) {
