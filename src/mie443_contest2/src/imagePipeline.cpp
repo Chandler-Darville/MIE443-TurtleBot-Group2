@@ -81,7 +81,7 @@ int ImagePipeline::getTemplateID(Boxes& boxes) {
             maxmatch = good_matches.size();
             template_id = i;
     
-            //std::cout << "Template " << i << " is a possible match!" << std::endl;
+            
 
             std::vector<cv::Point2f> obj, scene;
             for (const auto& match : good_matches) {
@@ -107,8 +107,9 @@ int ImagePipeline::getTemplateID(Boxes& boxes) {
             }
 
             cv::waitKey(1);
-            break;
+            // break;
         }
+        // std::cout << "Template " << i << " is a possible match!" << std::endl;
     }
 
     std::cout << "Final Template ID: " << template_id << std::endl;
