@@ -11,6 +11,8 @@
 #include <geometry_msgs/Twist.h>
 #include <math.h>
 
+#include <fstrem> //for file operation
+
 #define RAD2DEG(rad)(rad*180./M_PI)
 #define DEG2RAD(deg)(deg*M_PI/180.)
 
@@ -22,6 +24,18 @@ void odomCallback(const nav_msgs::Odometry::ConstPtr& msg){
     odomY = msg->pose.pose.position.y;
     odomYaw = tf::getYaw(msg->pose.pose.orientation);
     //ROS_INFO("Position: (%f, %f) Orientation: %f rad", odomX, odomY, odomYaw);
+}
+
+
+// Function to write tag information to a file
+void writeTagInfoToFile(int tagID, float x, float y, float yaw, const std::string& tagName) {
+    std::ofstream outFile("tag_info.txt", std::ios::app); // Open file in append mode
+    if (outFile.is_open()) {
+        outFile << "Tag ID: " << tagID << ", Position: (" << x << ", " << y << "), Yaw: " << yaw << ", Name: " << tagName << std::endl;
+        outFile.close();
+    } else {
+        ROS_ERROR("Unable to open file for writing tag information.");
+    }
 }
 
 int main(int argc, char** argv) {
@@ -113,6 +127,13 @@ int main(int argc, char** argv) {
 
                 std::cout << "c2 Final Template ID: " << templateID << std::endl;
                 ros::Duration(0.01).sleep();
+
+                 // Write tag information to file
+                 if (templateID >= 0) { // Assuming -1 is an invalid ID
+                    std::string tagName = "Tag_" + std::to_string(templateID); // Modify as needed
+                    writeTagInfoToFile(templateID, xGoal, yGoal, yawGoal, tagName);
+                }
+
                 // //-------------calling image detection------------
                 // for (int g=0; g<2; ++g)
                 // {
