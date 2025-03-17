@@ -11,7 +11,7 @@
 #include <geometry_msgs/Twist.h>
 #include <math.h>
 
-#include <fstrem> //for file operation
+#include <fstream> //for file operation
 
 #define RAD2DEG(rad)(rad*180./M_PI)
 #define DEG2RAD(deg)(deg*M_PI/180.)
@@ -122,8 +122,15 @@ int main(int argc, char** argv) {
                 Navigation::moveToGoal(xGoal, yGoal, yawGoal);
                 ros::Duration(1).sleep();
 
-
+                ros::spinOnce();
                 int templateID = imagePipeline.getTemplateID(boxes);
+
+                std::cout<< "Arrived"<<std::endl;
+
+
+                // if (templateID == -1) {
+                //     templateID = imagePipeline.getTemplateID(boxes);
+                // }
 
                 std::cout << "c2 Final Template ID: " << templateID << std::endl;
                 ros::Duration(0.01).sleep();

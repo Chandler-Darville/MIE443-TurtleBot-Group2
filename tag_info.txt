@@ -1,0 +1,13 @@
+Tag ID: 0, Position: (-1.10022, 1.56917), Yaw: 2.53561, Name: Tag_0
+Tag ID: 0, Position: (0.283984, 0.991398), Yaw: 3.13259, Name: Tag_0
+Tag ID: 0, Position: (-0.107281, -0.804999), Yaw: 1.57259, Name: Tag_0
+Tag ID: 0, Position: (2.35125, -0.965577), Yaw: 3.93259, Name: Tag_0
+Tag ID: 0, Position: (1.88732, 1.643), Yaw: 1.56659, Name: Tag_0
+Tag ID: 0, Position: (-1.10022, 1.56917), Yaw: 2.53561, Name: Tag_0
+Tag ID: 0, Position: (0.283984, 0.991398), Yaw: 3.13259, Name: Tag_0
+Tag ID: 1, Position: (-0.107281, -0.804999), Yaw: 1.57259, Name: Tag_1
+Tag ID: 0, Position: (2.35125, -0.965577), Yaw: 3.93259, Name: Tag_0
+Tag ID: 2, Position: (-1.10022, 1.56917), Yaw: 2.53561, Name: Tag_2
+Tag ID: 1, Position: (0.283984, 0.991398), Yaw: 3.13259, Name: Tag_1
+Tag ID: 1, Position: (-0.107281, -0.804999), Yaw: 1.57259, Name: Tag_1
+Tag ID: 2, Position: (2.35125, -0.965577), Yaw: 3.93259, Name: Tag_2

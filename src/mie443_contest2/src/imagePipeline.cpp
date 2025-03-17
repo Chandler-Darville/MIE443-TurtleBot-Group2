@@ -51,8 +51,8 @@ int ImagePipeline::getTemplateID(Boxes& boxes) {
     }
 
     cv::FlannBasedMatcher matcher(new cv::flann::KDTreeIndexParams(), new cv::flann::SearchParams());
+    int maxmatch = 0;
 
-    int maxmatch =0;
     for (int i = 0; i < boxes.templates.size(); i++) {
         cv::Mat template_img = boxes.templates[i];
 
@@ -80,7 +80,6 @@ int ImagePipeline::getTemplateID(Boxes& boxes) {
         if (good_matches.size() > maxmatch) {
             maxmatch = good_matches.size();
             template_id = i;
-            //std::cout << "Template " << i << " is a possible match!" << std::endl;
 
             std::vector<cv::Point2f> obj, scene;
             for (const auto& match : good_matches) {
@@ -105,9 +104,11 @@ int ImagePipeline::getTemplateID(Boxes& boxes) {
                 }
             }
 
+            // cv::imshow(img);
             cv::waitKey(1);
-            break;
+            // break;
         }
+        // std::cout << "Template " << i << " is a possible match!" << std::endl;
     }
 
     std::cout << "Final Template ID: " << template_id << std::endl;
