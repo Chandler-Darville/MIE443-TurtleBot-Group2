@@ -80,8 +80,9 @@ int main(int argc, char** argv) {
     //Initializing variables
     int i =0;
     float startingYaw, currentX, currentY, currentYaw, originX, originY, originYaw;
-    float offset = 0.3;
+    float offset = 0.4;
     int attempt=0;
+    bool goalSucess;
 
     // Execute strategy.
     while(ros::ok() && secondsElapsed <= 300) {
@@ -125,14 +126,18 @@ int main(int argc, char** argv) {
                     yGoal= boxes.coords[u][1] +sin(DEG2RAD(boxYaw))*offset;
                     yawGoal= DEG2RAD(boxYaw) + M_PI;
                     ROS_INFO("Goal %d: (%f, %f, %f)", u, xGoal, yGoal, yawGoal);
-                    Navigation::moveToGoal(xGoal, yGoal, yawGoal);
+                    if (goalSucess = Navigation::moveToGoal(xGoal, yGoal, yawGoal)){
+                        offset = 0.4;
+                        attempt=0;
+                    }
                     attempt ++;
-                    offset = offset + 0.1;
-                    if(attempt =>6){
+                    offset = offset + 0.15;
+                    if(attempt >=2){
+                        attempt=0;
                         break;
                     }    
                 }
-                while (! Navigation::moveToGoal(xGoal, yGoal, yawGoal))
+                while (!goalSucess);
 
                 ros::spinOnce();
                 int templateID = imagePipeline.getTemplateID(boxes);
