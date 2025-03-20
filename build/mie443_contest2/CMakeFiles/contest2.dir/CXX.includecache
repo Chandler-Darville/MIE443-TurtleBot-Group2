@@ -67,6 +67,12 @@ math.h
 -
 fstream
 -
+iostream
+-
+string
+-
+cstdlib
+-
 
 /home/thursday2023/catkin_ws/src/mie443_contest2/src/imagePipeline.cpp
 opencv2/xfeatures2d.hpp

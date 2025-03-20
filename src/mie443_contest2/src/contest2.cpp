@@ -80,7 +80,8 @@ int main(int argc, char** argv) {
     //Initializing variables
     int i =0;
     float startingYaw, currentX, currentY, currentYaw, originX, originY, originYaw;
-    float offset = 0.4;
+    float offset = 0.3;
+    int attempt=0;
 
     // Execute strategy.
     while(ros::ok() && secondsElapsed <= 300) {
@@ -118,13 +119,20 @@ int main(int argc, char** argv) {
         else{
             for (int u = 0; u<5;u++){
                 float xGoal, yGoal, boxYaw, yawGoal;
-                boxYaw= boxes.coords[u][2];
-                xGoal= boxes.coords[u][0] + cos(DEG2RAD(boxYaw))*offset;
-                yGoal= boxes.coords[u][1] +sin(DEG2RAD(boxYaw))*offset;
-                yawGoal= DEG2RAD(boxYaw) + M_PI;
-                ROS_INFO("Goal %d: (%f, %f, %f)", u, xGoal, yGoal, yawGoal);
-                Navigation::moveToGoal(xGoal, yGoal, yawGoal);
-                ros::Duration(1).sleep();
+                do{                                 // getting valid target coordinate by changing offset
+                    boxYaw= boxes.coords[u][2];
+                    xGoal= boxes.coords[u][0] + cos(DEG2RAD(boxYaw))*offset;
+                    yGoal= boxes.coords[u][1] +sin(DEG2RAD(boxYaw))*offset;
+                    yawGoal= DEG2RAD(boxYaw) + M_PI;
+                    ROS_INFO("Goal %d: (%f, %f, %f)", u, xGoal, yGoal, yawGoal);
+                    Navigation::moveToGoal(xGoal, yGoal, yawGoal);
+                    attempt ++;
+                    offset = offset + 0.1;
+                    if(attempt =>6){
+                        break;
+                    }    
+                }
+                while (! Navigation::moveToGoal(xGoal, yGoal, yawGoal))
 
                 ros::spinOnce();
                 int templateID = imagePipeline.getTemplateID(boxes);
@@ -153,7 +161,7 @@ int main(int argc, char** argv) {
             }
             bool success;
             success = Navigation::moveToGoal(originX, originY, originYaw);
-
+            
             int end_tout = 0;
 
             while (!success && end_tout < 10){
