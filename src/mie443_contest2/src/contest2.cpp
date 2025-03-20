@@ -32,10 +32,10 @@ void odomCallback(const nav_msgs::Odometry::ConstPtr& msg){
 
 
 // Function to write tag information to a file
-void writeTagInfoToFile(int tagID, float x, float y, float yaw, const std::string& tagName) {
+void writeTagInfoToFile(int tagID, float x, float y, float yaw, const std::string& tagName, int counter) {
     std::ofstream outFile("tag_info.txt", std::ios::app); // Open file in append mode
     if (outFile.is_open()) {
-        outFile << "Tag ID: " << tagID << ", Position: (" << x << ", " << y << "), Yaw: " << yaw << ", Name: " << tagName << std::endl;
+        outFile << "Tag ID: " << tagID << ", Position: (" << x << ", " << y << "), Yaw: " << yaw << ", Name: " << tagName << ", Appeared" << counter << " time(s)" << std::endl;
         outFile.close();
     } else {
         ROS_ERROR("Unable to open file for writing tag information.");
@@ -80,9 +80,14 @@ int main(int argc, char** argv) {
     //Initializing variables
     int i =0;
     float startingYaw, currentX, currentY, currentYaw, originX, originY, originYaw;
-    float offset = 0.4;
-    int attempt=0;
+    float offsetAngle = 20;
+    int attempt = 0;
     bool goalSucess;
+
+    int template_blank_counter=0;
+    int template_0_counter=0;
+    int template_1_counter=0;
+    int template_2_counter=0;
 
     // Execute strategy.
     while(ros::ok() && secondsElapsed <= 300) {
@@ -120,19 +125,34 @@ int main(int argc, char** argv) {
         else{
             for (int u = 0; u<5;u++){
                 float xGoal, yGoal, boxYaw, yawGoal;
-                do{                                 // getting valid target coordinate by changing offset
-                    boxYaw= boxes.coords[u][2];
-                    xGoal= boxes.coords[u][0] + cos(DEG2RAD(boxYaw))*offset;
-                    yGoal= boxes.coords[u][1] +sin(DEG2RAD(boxYaw))*offset;
-                    yawGoal= DEG2RAD(boxYaw) + M_PI;
+                do{ 
+                    if(attempt==0){
+                        boxYaw= boxes.coords[u][2];
+                        xGoal= boxes.coords[u][0] + cos(DEG2RAD(boxYaw))*0.4;
+                        yGoal= boxes.coords[u][1] +sin(DEG2RAD(boxYaw))*0.4;
+                        yawGoal= DEG2RAD(boxYaw) + M_PI;    
+                    }                                // getting valid target coordinate by changing offset angle
+                    if(attempt==1){
+                        boxYaw= boxes.coords[u][2]-offsetAngle;
+                        xGoal= boxes.coords[u][0] + cos(DEG2RAD(boxYaw))*0.4;
+                        yGoal= boxes.coords[u][1] +sin(DEG2RAD(boxYaw))*0.4;
+                        yawGoal= DEG2RAD(boxYaw) + M_PI;
+                    }
+                    if(attempt==2){
+                        boxYaw= boxes.coords[u][2]+offsetAngle;
+                        xGoal= boxes.coords[u][0] + cos(DEG2RAD(boxYaw))*0.4;
+                        yGoal= boxes.coords[u][1] +sin(DEG2RAD(boxYaw))*0.4;
+                        yawGoal= DEG2RAD(boxYaw) + M_PI;
+                    }
                     ROS_INFO("Goal %d: (%f, %f, %f)", u, xGoal, yGoal, yawGoal);
-                    if (goalSucess = Navigation::moveToGoal(xGoal, yGoal, yawGoal)){
-                        offset = 0.4;
+                    goalSucess = Navigation::moveToGoal(xGoal, yGoal, yawGoal);
+                    if (goalSucess){
                         attempt=0;
+                        break;
                     }
                     attempt ++;
-                    offset = offset + 0.15;
-                    if(attempt >=2){
+                    
+                    if(attempt >=3){
                         attempt=0;
                         break;
                     }    
@@ -151,7 +171,32 @@ int main(int argc, char** argv) {
 
                 // write goal coordinates to file every loop
 
-                std::string tagName = "template" + std::to_string(templateID);
+                // std::string tagName = "template" + std::to_string(templateID);
+                std::string tagName = "";
+                if(templateID==0)
+                {
+                    tagName = "raison bran";
+                    template_0_counter=template_0_counter+1;
+                    writeTagInfoToFile(templateID, xGoal, yGoal, yawGoal, tagName,template_0_counter);
+                }
+                else if(templateID==1)
+                {
+                    tagName = "cinnamon toast crunch";
+                    template_1_counter=template_1_counter+1;
+                    writeTagInfoToFile(templateID, xGoal, yGoal, yawGoal, tagName,template_1_counter);
+                }
+                else if(templateID==2)
+                {
+                    tagName = "rice krispies";
+                    template_2_counter=template_2_counter+1;
+                    writeTagInfoToFile(templateID, xGoal, yGoal, yawGoal, tagName,template_2_counter);
+                }
+                else
+                {
+                    tagName = "BLANK";
+                    template_blank_counter=template_blank_counter+1;
+                    writeTagInfoToFile(templateID, xGoal, yGoal, yawGoal, tagName,template_blank_counter);
+                }
 
                 std::cout << "To write to file:-----------------------" << std::endl;
                 std::cout << "      templateID: " << templateID << std::endl;
@@ -160,7 +205,7 @@ int main(int argc, char** argv) {
                 std::cout << "      yawGoal: " << yawGoal << std::endl;
                 std::cout << "      tagName: " << tagName << std::endl;
 
-                writeTagInfoToFile(templateID, xGoal, yGoal, yawGoal, tagName);
+                // writeTagInfoToFile(templateID, xGoal, yGoal, yawGoal, tagName);
 
                
             }
