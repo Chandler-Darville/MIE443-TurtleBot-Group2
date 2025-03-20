@@ -14,6 +14,7 @@
 #include <fstream> //for file operation
 #include <iostream>
 #include <string>
+#include <cstdlib>
 
 
 #define RAD2DEG(rad)(rad*180./M_PI)
@@ -29,12 +30,6 @@ void odomCallback(const nav_msgs::Odometry::ConstPtr& msg){
     //ROS_INFO("Position: (%f, %f) Orientation: %f rad", odomX, odomY, odomYaw);
 }
 
-int tagIDs[5];
-float xCoords[5];
-float yCoords[5];
-float yawCoords[5];
-std::string tagNames[5];
-int tag_idx = 0;
 
 // Function to write tag information to a file
 void writeTagInfoToFile(int tagID, float x, float y, float yaw, const std::string& tagName) {
@@ -157,11 +152,24 @@ int main(int argc, char** argv) {
                
             }
             bool success;
-            success = Navigation::moveToGoal(originX,originY, originYaw);
+            success = Navigation::moveToGoal(originX, originY, originYaw);
+
+            int end_tout = 0;
+
+            while (!success && end_tout < 10){
+
+                float newx, newy;   // vars for new x and y coords
+                float ran_val = ros::Time::now().toSec() - floor(ros::Time::now().toSec()); // rand [0,1]
+                // random offset to new coords
+                newx = originX + 0.2*cos(DEG2RAD(360*ran_val));
+                newy= originY + 0.2*sin(DEG2RAD(360*ran_val));
+
+                success = Navigation::moveToGoal(originX, originY, originYaw);
+
+                end_tout++;
+            }
 
             if (success) {
-
-                std::chrono::time_point t1 = std::chrono::steady_clock::now()
 
                 for (int i = 0; i < 4; i++) {
 
@@ -172,8 +180,8 @@ int main(int argc, char** argv) {
                 vel.angular.z = 0;    // stop
                 vel_pub.publish(vel);
 
-            } else {
-
+            } else if (end_tout >= 10) {
+                std::cout << "10 tries timeout" << std::endl;
             }
 
 
