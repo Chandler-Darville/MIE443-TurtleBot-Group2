@@ -12,6 +12,9 @@
 #include <math.h>
 
 #include <fstream> //for file operation
+#include <iostream>
+#include <string>
+
 
 #define RAD2DEG(rad)(rad*180./M_PI)
 #define DEG2RAD(deg)(deg*M_PI/180.)
@@ -134,32 +137,28 @@ int main(int argc, char** argv) {
                 std::cout<< "Arrived"<<std::endl;
 
 
-                // if (templateID == -1) {
-                //     templateID = imagePipeline.getTemplateID(boxes);
-                // }
-
                 std::cout << "c2 Final Template ID: " << templateID << std::endl;
                 ros::Duration(0.01).sleep();           
 
-                 // Write tag information to file
-                 if (templateID >= -1) {
-                    tagIDs[tag_idx] = templateID;
-                    xCoords[tag_idx] = xGoal;
-                    yCoords[tag_idx] = yGoal;
-                    yawCoords[tag_idx] = yawGoal;
-                    std::string tagName = "Tag_" + std::to_string(templateID); // Modify as needed
-                    tagNames[tag_idx] = tagName;
-                    tag_idx++;
-                    //writeTagInfoToFile(templateID, xGoal, yGoal, yawGoal, tagName);
-                }
+
+                // write goal coordinates to file every loop
+
+                std::string tagName = "template" + std::to_string(templateID);
+
+                std::cout << "To write to file:-----------------------" << std::endl;
+                std::cout << "      templateID: " << templateID << std::endl;
+                std::cout << "      xGoal: " << xGoal << std::endl;
+                std::cout << "      yGoal: " << yGoal << std::endl;
+                std::cout << "      yawGoal: " << yawGoal << std::endl;
+                std::cout << "      tagName: " << tagName << std::endl;
+
+                writeTagInfoToFile(templateID, xGoal, yGoal, yawGoal, tagName);
 
                
             }
             Navigation::moveToGoal(originX,originY, originYaw);
 
-            for (int i=0; i<5; i++) {
-                writeTagInfoToFile(tagIDs[i], xCoords[i], yCoords[i], yawCoords[i], tagNames[i]);
-            }
+
 
 
             break;
