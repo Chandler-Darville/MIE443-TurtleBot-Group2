@@ -156,7 +156,25 @@ int main(int argc, char** argv) {
 
                
             }
-            Navigation::moveToGoal(originX,originY, originYaw);
+            bool success;
+            success = Navigation::moveToGoal(originX,originY, originYaw);
+
+            if (success) {
+
+                std::chrono::time_point t1 = std::chrono::steady_clock::now()
+
+                for (int i = 0; i < 4; i++) {
+
+                    vel.angular.z = 1*pow(-1,i);    // changes rotational speed cw/ccw every iter
+                    vel_pub.publish(vel);
+                    ros::Duration(2).sleep();       // rotates for 2 seconds
+                }
+                vel.angular.z = 0;    // stop
+                vel_pub.publish(vel);
+
+            } else {
+
+            }
 
 
 
