@@ -3,7 +3,28 @@
 #include <imageTransporter.hpp>
 #include <chrono>
 
+#include <kobuki_msgs/CliffEvent.h>
+
+#include <kobuki_msgs/BumperEvent.h>
+#include <ros/time.h>
+
 using namespace std;
+
+#define Nbumpers 3
+uint8_t bumper[3] = {kobuki_msgs::BumperEvent::RELEASED, kobuki_msgs::BumperEvent::RELEASED, kobuki_msgs::BumperEvent::RELEASED};
+ros::Time bumper_press_time;  // Stores the time when both bumpers are first pressed
+bool waiting_for_confirmation = false;  // Flag to track if we're waiting for confirmation
+
+ros::Time left_pressed_time;
+ros::Time right_pressed_time;
+ros::Time center_pressed_time;
+ros::Time press_start_time;
+bool left_pressed = false;
+bool right_pressed = false;
+bool center_pressed = false;
+bool play_sound=true;
+const double GRACE_PERIOD = 0.3;   // 0.3 seconds grace period for simultaneous press
+
 
 geometry_msgs::Twist follow_cmd;
 int world_state = 0; // 0: normal operation, 1: Excitement; 2: Rage; 3: Fear;
@@ -12,9 +33,88 @@ void followerCB(const geometry_msgs::Twist msg){
     follow_cmd = msg;
 }
 
-void bumperCB(const geometry_msgs::Twist msg){
-    //Fill with code
+void bumperCB(const kobuki_msgs::BumperEvent::ConstPtr& msg){
+	sound_play::SoundClient sc;
+	string path_to_sounds = ros::package::getPath("mie443_contest3") + "/sounds/";
+	bumper[msg->bumper] = msg->state;
+
+	bool leftBumper = (bumper[kobuki_msgs::BumperEvent::LEFT] == kobuki_msgs::BumperEvent::PRESSED);
+	bool centerBumper = (bumper[kobuki_msgs::BumperEvent::CENTER] == kobuki_msgs::BumperEvent::PRESSED);
+    bool rightBumper = (bumper[kobuki_msgs::BumperEvent::RIGHT] == kobuki_msgs::BumperEvent::PRESSED);
+
+	// std::cout <<"Bumper Left: " << leftBumper << std::endl;
+	// std::cout <<"Bumper Right: "<< rightBumper << std::endl;
+	// std::cout << std::endl;
+	// std::cout << std::endl;
+	// std::cout << std::endl;
+
+    if (msg->state == kobuki_msgs::BumperEvent::PRESSED) 
+	{
+        if (msg->bumper == kobuki_msgs::BumperEvent::LEFT) 
+		{
+            left_pressed = true;
+            left_pressed_time = ros::Time::now();
+			press_start_time = ros::Time::now();
+        } 
+		else if (msg->bumper == kobuki_msgs::BumperEvent::RIGHT) 
+		{
+            right_pressed = true;
+            right_pressed_time = ros::Time::now();
+			press_start_time = ros::Time::now();
+        } 
+		else if (msg->bumper == kobuki_msgs::BumperEvent::CENTER) 
+		{
+            center_pressed = true;
+            center_pressed_time = ros::Time::now();
+			press_start_time = ros::Time::now();
+        }
+    } 
+	else if (msg->state == kobuki_msgs::BumperEvent::RELEASED) 
+	{
+        if (msg->bumper == kobuki_msgs::BumperEvent::LEFT) 
+		{
+            left_pressed = false;
+        } 
+		else if (msg->bumper == kobuki_msgs::BumperEvent::RIGHT) 
+		{
+            right_pressed = false;
+        } 
+		else if (msg->bumper == kobuki_msgs::BumperEvent::CENTER) 
+		{
+            center_pressed = false;
+        }
+    }
+
+    // If center bumper is pressed, play "rage.wav" immediately
+    if (center_pressed && play_sound) {
+        world_state = 2; // state 2 = obstacle
+        // ros::Duration(0.5).sleep();
+        return;
+    }
+
+    // If only one bumper is pressed, wait for the grace period to allow the second press
+    
+    while ((ros::Time::now() - press_start_time).toSec() < GRACE_PERIOD) {
+        // ros::spinOnce();
+        if (left_pressed && right_pressed && !center_pressed) {
+            world_state=1;	// state 1 = hug
+            // ros::Duration(0.5).sleep();
+            return;
+        }
+    }
+
+    // If only one bumper remains pressed after the grace period, play "rage.wav"
+    if ((left_pressed || right_pressed) && play_sound) {
+        world_state=2; //stage 2 = obstacle
+        // ros::Duration(0.5).sleep();
+    }
+
+	if (!left_pressed && !right_pressed && !center_pressed)
+	{
+		play_sound=true;
+	}
 }
+
 
 // Callback function for cliff detection (Fear state)
 void cliffCB(const kobuki_msgs::CliffEvent::ConstPtr& msg) {
@@ -74,10 +174,27 @@ int main(int argc, char **argv)
 			vel_pub.publish(follow_cmd);
 
 		}else if(world_state == 1){
-		
+			sc.playWave(path_to_sounds + "excitement.wav");
+			play_sound=false;
+			ros::Duration(2).sleep();
+			world_state=0;
 		}
-		else if(world_state == 2){
+		else if (world_state==2)
+		{
+			vel.angular.z = 0.0;
+			vel.linear.x = 0.0;
+			vel_pub.publish(vel);
+			ros::Duration(1).sleep();
 			
+			sc.playWave(path_to_sounds + "rage.wav");
+			play_sound=false;
+
+			// ROS_WARN("Bumper hit! Moving backward...");
+			vel.angular.z = 0.0;
+			vel.linear.x = -0.1;
+			vel_pub.publish(vel);
+			ros::Duration(1.5).sleep(); // robot move backward for 1.5 second
+			world_state=0;
 		}
 		else if(world_state == 3){
 			sc.playWave(path_to_sounds + "Lift_Fear.wav");
