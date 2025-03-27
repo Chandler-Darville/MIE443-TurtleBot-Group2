@@ -3,6 +3,8 @@
 #include <imageTransporter.hpp>
 #include <chrono>
 
+#include <opencv2/opencv.hpp>
+
 #include <kobuki_msgs/CliffEvent.h>
 
 #include <kobuki_msgs/BumperEvent.h>
@@ -36,6 +38,7 @@ void followerCB(const geometry_msgs::Twist msg){
 void bumperCB(const kobuki_msgs::BumperEvent::ConstPtr& msg){
 	sound_play::SoundClient sc;
 	string path_to_sounds = ros::package::getPath("mie443_contest3") + "/sounds/";
+	string path_to_pics = ros::package::getPath("mie443_contest3") + "/Pics/";
 	bumper[msg->bumper] = msg->state;
 
 	bool leftBumper = (bumper[kobuki_msgs::BumperEvent::LEFT] == kobuki_msgs::BumperEvent::PRESSED);
@@ -134,6 +137,7 @@ int main(int argc, char **argv)
 	ros::NodeHandle nh;
 	sound_play::SoundClient sc;
 	string path_to_sounds = ros::package::getPath("mie443_contest3") + "/sounds/";
+	string path_to_pics = ros::package::getPath("mie443_contest3") + "/Pics/";
 	teleController eStop;
 
 	//publishers
@@ -176,9 +180,17 @@ int main(int argc, char **argv)
 			ROS_WARN("State 0: Following");
 
 		}else if(world_state == 1){
-			sc.playWave(path_to_sounds + "excitement.wav");
+			sc.playWave(path_to_sounds + "surprise.wav");
 			play_sound=false;
-			ros::Duration(2).sleep();
+			// Load and display an image
+			cv::Mat img = cv::imread(path_to_pics+"surprise.jpg");
+			if (!img.empty()) 
+			{
+				cv::imshow("surprise!", img);
+				cv::waitKey(2000);  // Show for 2 seconds
+				cv::destroyWindow("surprise!");
+			} 
+			// ros::Duration(2).sleep();
 			world_state=0;
 			ROS_WARN("State 1: Excitement!");
 		}
@@ -191,6 +203,14 @@ int main(int argc, char **argv)
 			
 			sc.playWave(path_to_sounds + "rage.wav");
 			play_sound=false;
+
+			// Load and display an image
+			cv::Mat img = cv::imread(path_to_pics+"rage.jpg");
+			if (!img.empty()) {
+				cv::imshow("rage!", img);
+				cv::waitKey(2000);  // Show for 2 seconds
+				cv::destroyWindow("rage!");
+			} 
 
 			// ROS_WARN("Bumper hit! Moving backward...");
 			vel.angular.z = 0.0;
