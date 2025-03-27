@@ -180,8 +180,7 @@ int main(int argc, char **argv)
 			play_sound=false;
 			ros::Duration(2).sleep();
 			world_state=0;
-			ROS_WARN("State 1");
-
+			ROS_WARN("State 1: Excitement!");
 		}
 		else if (world_state==2)
 		{
@@ -199,12 +198,13 @@ int main(int argc, char **argv)
 			vel_pub.publish(vel);
 			ros::Duration(1.5).sleep(); // robot move backward for 1.5 second
 			world_state=0;
-			ROS_WARN("State 2");
+			ROS_WARN("State 2: Rage");
 		}
 		else if(world_state == 3){
 			sc.playWave(path_to_sounds + "Lift_Fear.wav");
 			ROS_WARN("Robot stopped due to cliff detection!");
 			ros::Duration(1).sleep();
+			ROS_WARN("State 3: Fear");
 		}
 		secondsElapsed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now()-start).count();
 		loop_rate.sleep();
