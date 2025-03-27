@@ -119,8 +119,8 @@ void bumperCB(const kobuki_msgs::BumperEvent::ConstPtr& msg){
 // Callback function for cliff detection (Fear state)
 void cliffCB(const kobuki_msgs::CliffEvent::ConstPtr& msg) {
     if (msg->state == kobuki_msgs::CliffEvent::CLIFF) {  
-        ROS_WARN("Cliff detected! Switching world_state to 1.");
-        world_state = 1; 
+        ROS_WARN("Cliff detected! Switching world_state to 3.");
+        world_state = 3; 
     } else {
         world_state = 0;  // Resume normal movement
     }
@@ -142,6 +142,7 @@ int main(int argc, char **argv)
 	//subscribers
 	ros::Subscriber follower = nh.subscribe("follower_velocity_smoother/smooth_cmd_vel", 10, &followerCB);
 	ros::Subscriber bumper = nh.subscribe("mobile_base/events/bumper", 10, &bumperCB);
+	ros::Subscriber cliff_sub = nh.subscribe("mobile_base/events/cliff", 10, &cliffCB);
 
     // contest count down timer
 	ros::Rate loop_rate(10);
@@ -153,7 +154,7 @@ int main(int argc, char **argv)
 	//imageTransporter rgbTransport("camera/rgb/image_raw", sensor_msgs::image_encodings::BGR8); //--for turtlebot Camera
 	imageTransporter depthTransport("camera/depth_registered/image_raw", sensor_msgs::image_encodings::TYPE_32FC1);
 
-	int world_state = 0;
+	// int world_state = 0;
 
 	double angular = 0.2;
 	double linear = 0.0;
@@ -162,8 +163,8 @@ int main(int argc, char **argv)
 	vel.angular.z = angular;
 	vel.linear.x = linear;
 
-	sc.playWave(path_to_sounds + "sound.wav");
-	ros::Duration(0.5).sleep();
+	// sc.playWave(path_to_sounds + "sound.wav");
+	// ros::Duration(0.5).sleep();
 
 	while(ros::ok() && secondsElapsed <= 480){		
 		ros::spinOnce();
@@ -172,12 +173,15 @@ int main(int argc, char **argv)
 			//fill with your code
 			//vel_pub.publish(vel);
 			vel_pub.publish(follow_cmd);
+			ROS_WARN("State 0: Following");
 
 		}else if(world_state == 1){
 			sc.playWave(path_to_sounds + "excitement.wav");
 			play_sound=false;
 			ros::Duration(2).sleep();
 			world_state=0;
+			ROS_WARN("State 1");
+
 		}
 		else if (world_state==2)
 		{
@@ -195,6 +199,7 @@ int main(int argc, char **argv)
 			vel_pub.publish(vel);
 			ros::Duration(1.5).sleep(); // robot move backward for 1.5 second
 			world_state=0;
+			ROS_WARN("State 2");
 		}
 		else if(world_state == 3){
 			sc.playWave(path_to_sounds + "Lift_Fear.wav");
