@@ -6,7 +6,7 @@
 using namespace std;
 
 geometry_msgs::Twist follow_cmd;
-int world_state;
+int world_state = 0; // 0: normal operation, 1: Excitement; 2: Rage; 3: Fear;
 
 void followerCB(const geometry_msgs::Twist msg){
     follow_cmd = msg;
@@ -14,6 +14,16 @@ void followerCB(const geometry_msgs::Twist msg){
 
 void bumperCB(const geometry_msgs::Twist msg){
     //Fill with code
+}
+
+// Callback function for cliff detection (Fear state)
+void cliffCB(const kobuki_msgs::CliffEvent::ConstPtr& msg) {
+    if (msg->state == kobuki_msgs::CliffEvent::CLIFF) {  
+        ROS_WARN("Cliff detected! Switching world_state to 1.");
+        world_state = 1; 
+    } else {
+        world_state = 0;  // Resume normal movement
+    }
 }
 
 //-------------------------------------------------------------
@@ -64,10 +74,15 @@ int main(int argc, char **argv)
 			vel_pub.publish(follow_cmd);
 
 		}else if(world_state == 1){
-			/*
-			...
-			...
-			*/
+		
+		}
+		else if(world_state == 2){
+			
+		}
+		else if(world_state == 3){
+			sc.playWave(path_to_sounds + "Lift_Fear.wav");
+			ROS_WARN("Robot stopped due to cliff detection!");
+			ros::Duration(1).sleep();
 		}
 		secondsElapsed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now()-start).count();
 		loop_rate.sleep();
