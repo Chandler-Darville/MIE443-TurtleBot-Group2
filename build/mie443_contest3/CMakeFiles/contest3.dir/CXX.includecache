@@ -75,6 +75,10 @@ imageTransporter.hpp
 -
 chrono
 -
+kobuki_msgs/Led.h
+-
+opencv2/opencv.hpp
+-
 kobuki_msgs/CliffEvent.h
 -
 kobuki_msgs/BumperEvent.h
@@ -421,6 +425,22 @@ ros/message_operations.h
 -
 
 /opt/ros/kinetic/include/kobuki_msgs/CliffEvent.h
+string
+-
+vector
+-
+map
+-
+ros/types.h
+-
+ros/serialization.h
+-
+ros/builtin_message_traits.h
+-
+ros/message_operations.h
+-
+
+/opt/ros/kinetic/include/kobuki_msgs/Led.h
 string
 -
 vector

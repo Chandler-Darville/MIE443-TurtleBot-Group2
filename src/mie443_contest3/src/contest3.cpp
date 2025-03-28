@@ -2,7 +2,7 @@
 #include <ros/package.h>
 #include <imageTransporter.hpp>
 #include <chrono>
-
+#include <kobuki_msgs/Led.h>	// for LED control
 #include <opencv2/opencv.hpp>
 
 #include <kobuki_msgs/CliffEvent.h>
@@ -29,9 +29,9 @@ const double GRACE_PERIOD = 0.3;   // 0.3 seconds grace period for simultaneous 
 
 
 geometry_msgs::Twist follow_cmd;
-int world_state = 0; // 0: start up, 1: Surprise - Pet; 2: Rage - obstacle; 3: Fear - Lift; 4: Sadness - lost user; 5 - following
+int world_state = 0; 
 
-
+//0-startup, 1-following, 2-sadt, 3-surprise, 4-rage, 5-fear
 
 void followerCB(const geometry_msgs::Twist msg){
     follow_cmd = msg;
@@ -92,7 +92,7 @@ void bumperCB(const kobuki_msgs::BumperEvent::ConstPtr& msg){
 
     // If center bumper is pressed, play "rage.wav" immediately
     if (center_pressed && play_sound) {
-        world_state = 2; // state 2 = obstacle
+        world_state = 4; // state 4 = obstacle
         // ros::Duration(0.5).sleep();
         return;
     }
@@ -102,7 +102,7 @@ void bumperCB(const kobuki_msgs::BumperEvent::ConstPtr& msg){
     while ((ros::Time::now() - press_start_time).toSec() < GRACE_PERIOD) {
         // ros::spinOnce();
         if (left_pressed && right_pressed && !center_pressed) {
-            world_state=1;	// state 1 = hug
+            world_state=3;	// state 3 = hug
             // ros::Duration(0.5).sleep();
             return;
         }
@@ -110,7 +110,7 @@ void bumperCB(const kobuki_msgs::BumperEvent::ConstPtr& msg){
 
     // If only one bumper remains pressed after the grace period, play "rage.wav"
     if ((left_pressed || right_pressed) && play_sound) {
-        world_state=2; //stage 2 = obstacle
+        world_state=4; //stage 4 = obstacle
         // ros::Duration(0.5).sleep();
     }
 
@@ -124,12 +124,24 @@ void bumperCB(const kobuki_msgs::BumperEvent::ConstPtr& msg){
 // Callback function for cliff detection (Fear state)
 void cliffCB(const kobuki_msgs::CliffEvent::ConstPtr& msg) {
     if (msg->state == kobuki_msgs::CliffEvent::CLIFF) {  
-        ROS_WARN("Cliff detected! Switching world_state to 3.");
-        world_state = 3; 
+        ROS_WARN("Cliff detected! Switching world_state to 5.");
+        world_state = 5; 
     } else {
-        world_state = 0;  // Resume normal movement
+        world_state = 1;  // Resume normal movement
     }
 }
+
+void set_led(ros::Publisher &pub, int color) {
+	// colors: off = 0, Green = 1, Orange = 2, Red = 3
+    kobuki_msgs::Led msg;
+    msg.value = color;
+    pub.publish(msg);
+    ROS_INFO("Set LED to color %d", color);
+}
+
+
+
+//-------------------------------------------------------------
 
 //-------------------------------------------------------------
 
@@ -144,6 +156,8 @@ int main(int argc, char **argv)
 
 	//publishers
 	ros::Publisher vel_pub = nh.advertise<geometry_msgs::Twist>("cmd_vel_mux/input/teleop",1);
+	ros::Publisher led1_pub = nh.advertise<kobuki_msgs::Led>("/mobile_base/commands/led1", 10);
+    ros::Publisher led2_pub = nh.advertise<kobuki_msgs::Led>("/mobile_base/commands/led2", 10);
 
 	//subscribers
 	ros::Subscriber follower = nh.subscribe("follower_velocity_smoother/smooth_cmd_vel", 10, &followerCB);
@@ -154,6 +168,7 @@ int main(int argc, char **argv)
 	ros::Rate loop_rate(10);
     std::chrono::time_point<std::chrono::system_clock> start;
     start = std::chrono::system_clock::now();
+	std::chrono::time_point<std::chrono::system_clock> lost;
     uint64_t secondsElapsed = 0;
 
 	imageTransporter rgbTransport("camera/image/", sensor_msgs::image_encodings::BGR8); //--for Webcam
@@ -162,26 +177,61 @@ int main(int argc, char **argv)
 
 	// int world_state = 0;
 
-	double angular = 0.2;
+	double angular = M_PI/3;
 	double linear = 0.0;
 
 	geometry_msgs::Twist vel;
 	vel.angular.z = angular;
 	vel.linear.x = linear;
 
+	vector<float> linear_vel, angular_vel, zero;
+	zero = {0.0,0.0,0.0};
+	bool lostSound = false;
+
 	// sc.playWave(path_to_sounds + "sound.wav");
 	// ros::Duration(0.5).sleep();
 
-	while(ros::ok() && secondsElapsed <= 480){		
+	while(ros::ok() && secondsElapsed <= 480){	
 		ros::spinOnce();
+		linear_vel = {follow_cmd.linear.x, follow_cmd.linear.y,follow_cmd.linear.z};
+		angular_vel = {follow_cmd.angular.x, follow_cmd.angular.y, follow_cmd.angular.z};
+		if(world_state == 0){				//world state 0-startup	
+			if(linear_vel == zero && angular_vel==zero){
+				vel_pub.publish(vel);
+				ROS_INFO("Hasn't found user to follow");
+			}
+			else{
+				world_state = 1;
+			}
 
-		if(world_state == 0){
-			//fill with your code
-			//vel_pub.publish(vel);
+		}else if(world_state == 1){		//world state 1-following
 			vel_pub.publish(follow_cmd);
-			ROS_WARN("State 0: Following");
-
-		}else if(world_state == 1){
+			ROS_INFO("Following user");
+			if(linear_vel == zero && angular_vel==zero){
+				world_state = 2;
+				lost = std::chrono::system_clock::now();
+			}
+		}
+		else if(world_state == 2){		//world state 2- lost, sad
+			ROS_INFO("Lost track of user");
+			vel.angular.z = M_PI/3;
+			vel.linear.x = 0.0;
+			if(((std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now()-lost).count()/1000)%6) < 1){
+				lostSound=true;
+			}
+			else{
+				lostSound=false;
+			}		
+			if(lostSound){
+				ROS_INFO("Playing sad sound");
+				sc.playWave(path_to_sounds + "KennyCries.wav");
+			}
+			vel_pub.publish(vel);
+			if(linear_vel != zero || angular_vel!=zero){
+				world_state = 1;
+			}
+		}
+		else if(world_state == 3){		//world state 3- surprise, pet
 			sc.playWave(path_to_sounds + "surprise.wav");
 			play_sound=false;
 			// Load and display an image
@@ -193,11 +243,10 @@ int main(int argc, char **argv)
 				cv::destroyWindow("surprise!");
 			} 
 			// ros::Duration(2).sleep();
-			world_state=0;
-			ROS_WARN("State 1: Excitement!");
+			world_state=1;
+			ROS_WARN("Surprise!");
 		}
-		else if (world_state==2)
-		{
+		else if(world_state == 4){		//world state 4- rage, obstacle
 			vel.angular.z = 0.0;
 			vel.linear.x = 0.0;
 			vel_pub.publish(vel);
@@ -219,15 +268,16 @@ int main(int argc, char **argv)
 			vel.linear.x = -0.1;
 			vel_pub.publish(vel);
 			ros::Duration(1.5).sleep(); // robot move backward for 1.5 second
-			world_state=0;
-			ROS_WARN("State 2: Rage");
+			world_state=1;
+			ROS_WARN("Rage");
 		}
-		else if(world_state == 3){
+		else if(world_state == 5){		//world state 5 - fear, lift
 			sc.playWave(path_to_sounds + "Lift_Fear.wav");
 			ROS_WARN("Robot stopped due to cliff detection!");
 			ros::Duration(1).sleep();
-			ROS_WARN("State 3: Fear");
+			ROS_WARN("Fear");
 		}
+		
 		secondsElapsed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now()-start).count();
 		loop_rate.sleep();
 	}
