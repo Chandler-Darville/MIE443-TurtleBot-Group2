@@ -139,6 +139,37 @@ void set_led(ros::Publisher &pub, int color) {
     ROS_INFO("Set LED to color %d", color);
 }
 
+ros::Time prev_time = ros::Time::now();
+
+int led1_state = 0;
+int led2_state = 0;
+
+bool change_led(ros::Time prev_time, ros::Time curr_time) {
+
+	if ((curr_time - prev_time).toSec() >= 1.0) {
+		return true;
+	}
+	else {
+		return false;
+	}
+}
+
+void led_sequence(ros::Publisher &led1pub, ros::Publisher &led2pub) {
+
+	if (world_state == 0) {		// initialized - slow alternating green blink
+
+		if (change_led) {
+
+			if (led1_state == 0 && led2_state == 0){
+
+				set_led(led1pub, 1);
+				led1_state = 1;
+			}
+		}
+
+	}
+}
+
 
 
 //-------------------------------------------------------------
