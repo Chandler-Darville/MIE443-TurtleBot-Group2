@@ -270,6 +270,8 @@ int main(int argc, char **argv)
 				lostSound=false;
 			}		
 			if(lostSound){
+				image_display("sadness.jpg");
+				
 				ROS_INFO("Playing sad sound");
 				sc.playWave(path_to_sounds + "KennyCries.wav");
 			}
@@ -282,7 +284,7 @@ int main(int argc, char **argv)
 			sc.playWave(path_to_sounds + "surprise.wav");
 			play_sound=false;
 			
-			image_display("");
+			image_display("surprise.jpg");
 
 			// ros::Duration(2).sleep();
 			world_state=1;
@@ -297,13 +299,7 @@ int main(int argc, char **argv)
 			sc.playWave(path_to_sounds + "rage.wav");
 			play_sound=false;
 
-			// Load and display an image
-			cv::Mat img = cv::imread(path_to_pics+"rage.jpg");
-			if (!img.empty()) {
-				cv::imshow("rage!", img);
-				cv::waitKey(2000);  // Show for 2 seconds
-				cv::destroyWindow("rage!");
-			} 
+			image_display("rage.jpg");
 
 			// ROS_WARN("Bumper hit! Moving backward...");
 			vel.angular.z = 0.0;
@@ -315,6 +311,7 @@ int main(int argc, char **argv)
 		}
 		else if(world_state == 5){		//world state 5 - fear, lift
 			sc.playWave(path_to_sounds + "Lift_Fear.wav");
+			image_display("fear.jpg");
 			ROS_WARN("Robot stopped due to cliff detection!");
 			ros::Duration(1).sleep();
 			ROS_WARN("Fear");
