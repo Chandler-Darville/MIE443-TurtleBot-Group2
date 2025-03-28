@@ -40,8 +40,8 @@ void image_display(string file_name)
 	cv::Mat img = cv::imread(path_to_pics + file_name);
 	if (!img.empty()) 
 	{
-		cv::namedWindow(file_name, cv::WINDOW_FULLSCREEN);
-        cv::setWindowProperty(file_name, cv::WND_PROP_FULLSCREEN, cv::WINDOW_FULLSCREEN);
+		// cv::namedWindow(file_name, cv::WINDOW_FULLSCREEN);
+        // cv::setWindowProperty(file_name, cv::WND_PROP_FULLSCREEN, cv::WINDOW_FULLSCREEN);
 
 		cv::imshow(file_name, img);
 		cv::waitKey(2000);  // Show for 2 seconds
@@ -147,15 +147,15 @@ void cliffCB(const kobuki_msgs::CliffEvent::ConstPtr& msg) {
     }
 }
 
-void set_led(ros::Publisher &pub, int color) {
-	// colors: off = 0, Green = 1, Orange = 2, Red = 3
-    kobuki_msgs::Led msg;
-    msg.value = color;
-    pub.publish(msg);
-    ROS_INFO("Set LED to color %d", color);
-}
+// void set_led(ros::Publisher &pub, int color) {
+// 	// colors: off = 0, Green = 1, Orange = 2, Red = 3
+//     kobuki_msgs::Led msg;
+//     msg.value = color;
+//     pub.publish(msg);
+//     ROS_INFO("Set LED to color %d", color);
+// }
 
-ros::Time prev_time = ros::Time::now();
+// ros::Time prev_time = ros::Time::now();
 
 int led1_state = 0;
 int led2_state = 0;
@@ -170,21 +170,21 @@ bool change_led(ros::Time prev_time, ros::Time curr_time) {
 	}
 }
 
-void led_sequence(ros::Publisher &led1pub, ros::Publisher &led2pub) {
+// void led_sequence(ros::Publisher &led1pub, ros::Publisher &led2pub) {
 
-	if (world_state == 0) {		// initialized - slow alternating green blink
+// 	if (world_state == 0) {		// initialized - slow alternating green blink
 
-		if (change_led) {
+// 		if (change_led) {
 
-			if (led1_state == 0 && led2_state == 0){
+// 			if (led1_state == 0 && led2_state == 0){
 
-				set_led(led1pub, 1);
-				led1_state = 1;
-			}
-		}
+// 				set_led(led1pub, 1);
+// 				led1_state = 1;
+// 			}
+// 		}
 
-	}
-}
+// 	}
+// }
 
 
 
@@ -278,6 +278,7 @@ int main(int argc, char **argv)
 			vel_pub.publish(vel);
 			if(linear_vel != zero || angular_vel!=zero){
 				world_state = 1;
+				sc.stopWave(path_to_sounds + "KennyCries.wav");
 			}
 		}
 		else if(world_state == 3){		//world state 3- surprise, pet
@@ -295,17 +296,19 @@ int main(int argc, char **argv)
 			vel.linear.x = 0.0;
 			vel_pub.publish(vel);
 			ros::Duration(1).sleep();
-			
-			sc.playWave(path_to_sounds + "rage.wav");
-			play_sound=false;
-
-			image_display("rage.jpg");
 
 			// ROS_WARN("Bumper hit! Moving backward...");
 			vel.angular.z = 0.0;
 			vel.linear.x = -0.1;
 			vel_pub.publish(vel);
 			ros::Duration(1.5).sleep(); // robot move backward for 1.5 second
+			
+			sc.playWave(path_to_sounds + "rage.wav");
+			play_sound=false;
+
+			image_display("rage.jpg");
+
+			
 			world_state=1;
 			ROS_WARN("Rage");
 		}
