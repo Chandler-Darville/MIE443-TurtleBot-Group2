@@ -29,7 +29,9 @@ const double GRACE_PERIOD = 0.3;   // 0.3 seconds grace period for simultaneous 
 
 
 geometry_msgs::Twist follow_cmd;
-int world_state = 0; // 0: normal operation, 1: Excitement; 2: Rage; 3: Fear;
+int world_state = 0; // 0: start up, 1: Surprise - Pet; 2: Rage - obstacle; 3: Fear - Lift; 4: Sadness - lost user; 5 - following
+
+
 
 void followerCB(const geometry_msgs::Twist msg){
     follow_cmd = msg;
