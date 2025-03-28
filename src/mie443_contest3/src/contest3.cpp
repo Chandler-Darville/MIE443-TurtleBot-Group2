@@ -27,11 +27,27 @@ bool center_pressed = false;
 bool play_sound=true;
 const double GRACE_PERIOD = 0.3;   // 0.3 seconds grace period for simultaneous press
 
+string path_to_pics = ros::package::getPath("mie443_contest3") + "/Pics/";
 
 geometry_msgs::Twist follow_cmd;
 int world_state = 0; 
 
 //0-startup, 1-following, 2-sadt, 3-surprise, 4-rage, 5-fear
+
+void image_display(string file_name)
+{
+	// Load and display an image
+	cv::Mat img = cv::imread(path_to_pics + file_name);
+	if (!img.empty()) 
+	{
+		cv::namedWindow(file_name, cv::WINDOW_FULLSCREEN);
+        cv::setWindowProperty(file_name, cv::WND_PROP_FULLSCREEN, cv::WINDOW_FULLSCREEN);
+
+		cv::imshow(file_name, img);
+		cv::waitKey(2000);  // Show for 2 seconds
+		cv::destroyWindow(file_name);
+	}
+}
 
 void followerCB(const geometry_msgs::Twist msg){
     follow_cmd = msg;
@@ -265,14 +281,9 @@ int main(int argc, char **argv)
 		else if(world_state == 3){		//world state 3- surprise, pet
 			sc.playWave(path_to_sounds + "surprise.wav");
 			play_sound=false;
-			// Load and display an image
-			cv::Mat img = cv::imread(path_to_pics+"surprise.jpg");
-			if (!img.empty()) 
-			{
-				cv::imshow("surprise!", img);
-				cv::waitKey(2000);  // Show for 2 seconds
-				cv::destroyWindow("surprise!");
-			} 
+			
+			image_display("");
+
 			// ros::Duration(2).sleep();
 			world_state=1;
 			ROS_WARN("Surprise!");
