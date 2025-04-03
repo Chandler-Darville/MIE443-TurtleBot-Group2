@@ -147,44 +147,13 @@ void cliffCB(const kobuki_msgs::CliffEvent::ConstPtr& msg) {
     }
 }
 
-// void set_led(ros::Publisher &pub, int color) {
-// 	// colors: off = 0, Green = 1, Orange = 2, Red = 3
-//     kobuki_msgs::Led msg;
-//     msg.value = color;
-//     pub.publish(msg);
-//     ROS_INFO("Set LED to color %d", color);
-// }
-
-// ros::Time prev_time = ros::Time::now();
-
-int led1_state = 0;
-int led2_state = 0;
-
-bool change_led(ros::Time prev_time, ros::Time curr_time) {
-
-	if ((curr_time - prev_time).toSec() >= 1.0) {
-		return true;
-	}
-	else {
-		return false;
-	}
+void set_led(ros::Publisher &pub, int color) {
+	// colors: off = 0, Green = 1, Orange = 2, Red = 3
+    kobuki_msgs::Led msg;
+    msg.value = color;
+    pub.publish(msg);
+    ROS_INFO("Set LED to color %d", color);
 }
-
-// void led_sequence(ros::Publisher &led1pub, ros::Publisher &led2pub) {
-
-// 	if (world_state == 0) {		// initialized - slow alternating green blink
-
-// 		if (change_led) {
-
-// 			if (led1_state == 0 && led2_state == 0){
-
-// 				set_led(led1pub, 1);
-// 				led1_state = 1;
-// 			}
-// 		}
-
-// 	}
-// }
 
 
 
@@ -238,6 +207,9 @@ int main(int argc, char **argv)
 	// sc.playWave(path_to_sounds + "sound.wav");
 	// ros::Duration(0.5).sleep();
 
+	int led1_state = 0;
+	int led2_state = 0;
+
 	while(ros::ok() && secondsElapsed <= 480){	
 		ros::spinOnce();
 		linear_vel = {follow_cmd.linear.x, follow_cmd.linear.y,follow_cmd.linear.z};
@@ -254,6 +226,13 @@ int main(int argc, char **argv)
 		}else if(world_state == 1){		//world state 1-following
 			vel_pub.publish(follow_cmd);
 			ROS_INFO("Following user");
+
+			// set LEDs to green (1), if not already
+			if (led1_state != 1){set_led(led1_pub, 1);}
+			if (led2_state != 1){set_led(led2_pub, 1);}
+			led1_state = 1;
+			led2_state = 1;
+
 			if(linear_vel == zero && angular_vel==zero){
 				world_state = 2;
 				lost = std::chrono::system_clock::now();
@@ -261,6 +240,13 @@ int main(int argc, char **argv)
 		}
 		else if(world_state == 2){		//world state 2- lost, sad
 			ROS_INFO("Lost track of user");
+
+			// set LED1 to off (0), LED2 to orange (2), if not already
+			if (led1_state != 0){set_led(led1_pub, 0);}
+			if (led2_state != 2){set_led(led2_pub, 2);}
+			led1_state = 0;
+			led2_state = 2;
+
 			vel.angular.z = M_PI/3;
 			vel.linear.x = 0.0;
 			if(((std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now()-lost).count()/1000)%6) < 1){
@@ -287,6 +273,12 @@ int main(int argc, char **argv)
 			
 			image_display("surprise.jpg");
 
+			// set LED1 to orange (2), LED2 to green (1), if not already
+			if (led1_state != 2){set_led(led1_pub, 2);}
+			if (led2_state != 1){set_led(led2_pub, 1);}
+			led1_state = 2;
+			led2_state = 1;
+
 			// ros::Duration(2).sleep();
 			world_state=1;
 			ROS_WARN("Surprise!");
@@ -306,6 +298,12 @@ int main(int argc, char **argv)
 			sc.playWave(path_to_sounds + "rage.wav");
 			play_sound=false;
 
+			// set LEDs to red (3), if not already
+			if (led1_state != 3){set_led(led1_pub, 3);}
+			if (led2_state != 3){set_led(led2_pub, 3);}
+			led1_state = 3;
+			led2_state = 3;
+
 			image_display("rage.jpg");
 
 			
@@ -314,6 +312,13 @@ int main(int argc, char **argv)
 		}
 		else if(world_state == 5){		//world state 5 - fear, lift
 			sc.playWave(path_to_sounds + "Lift_Fear.wav");
+
+			// set LEDs to orange (2), if not already
+			if (led1_state != 2){set_led(led1_pub, 2);}
+			if (led2_state != 2){set_led(led2_pub, 2);}
+			led1_state = 2;
+			led2_state = 2;
+
 			image_display("fear.jpg");
 			ROS_WARN("Robot stopped due to cliff detection!");
 			ros::Duration(1).sleep();
@@ -323,6 +328,12 @@ int main(int argc, char **argv)
 		secondsElapsed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now()-start).count();
 		loop_rate.sleep();
 	}
+
+	// turn off LEDs
+	if (led1_state != 0){set_led(led1_pub, 0);}
+	if (led2_state != 0){set_led(led2_pub, 0);}
+	led1_state = 0;
+	led2_state = 0;
 
 	return 0;
 }
